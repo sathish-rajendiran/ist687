@@ -1,0 +1,309 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+-----------------------------------------------------------------------------------
+Title: "IST687 – Viz Map HW: Median Income"
+Name: Sathish Kumar Rajendiran
+Week: 7
+Date: 05/21/2020
+-----------------------------------------------------------------------------------
+Exercise: 
+        Median Income
+
+# Install necessary packages
+
+```{r}
+install.packages( pkgs=c("gdata","readxl","zipcode","ggplot2","reshape2","ggeasy","viridis"),repos = "http://cran.us.r-project.org")
+
+library(readxl)
+library(gdata)
+library(xlsx)
+library(ggplot2)
+library(ggcorrplot)
+library(reshape2)
+library(ggeasy)
+library(zipcode)
+library(viridis)
+library(viridisLite)
+```
+
+#printDataInfo function
+
+```{r}
+# function printDataInfo
+  printDataInfo <- function(myData)
+    {
+      strinfo <- str(myData)
+      cat("str:",strinfo,"\n")
+      
+      colnamesinfo <- colnames(myData)
+      cat("colnames:",colnamesinfo,"\n")
+      
+      diminfo <- dim(myData)
+      cat("dim:",diminfo,"\n")
+      
+      nrowinfo <- nrow(myData)
+      cat("nrow:",nrowinfo,"\n")
+      
+      nrowsinfo <- myData[1:3,]
+      return(nrowsinfo)
+     }
+```
+
+
+# Step 1: Load the Data
+
+```{r}
+# 1) Read the data – using the gdata package we have previously used.
+
+    filepath <- "/Users/sathishrajendiran/Documents/MedianZIP_2_2.xlsx"
+    data_types<-c("text","text","text","text")
+    
+    # function readFiles
+    readFiles <- function(fpath)
+      {
+      dftemp <- read_excel(filepath,skip = 1,col_types = data_types)
+      return(dftemp)
+    }
+    
+    medianxls_dftemp <- readFiles(filepath)
+    medianxls_dftemp[1:10,]
+    
+ 
+```
+
+
+
+# Clean the data 
+
+
+```{r}
+# 2) Clean up the dataframe
+# a. Remove any info at the front of the file that’s not needed
+# b. Update the column names (zip, median, mean, population)
+
+#   Remove NAs   
+     medianxls <- na.omit(medianxls_dftemp) 
+    
+#   Round and convert to integer
+     medianxls$Median <- round(as.numeric( medianxls$Median),0)
+     medianxls$Mean <- round(as.numeric( medianxls$Mean),0)
+     medianxls$Pop <- round(as.numeric( medianxls$Pop),0)
+    
+     medianxlsDF <- data.frame( medianxls)
+    
+     medianxlsDF <- na.omit(medianxlsDF) 
+
+    #   Rename  column names as (zip, median, mean, population)    
+     colnames(medianxlsDF) <- c("zip","median","mean","population")
+
+    #   Review the dataframe  
+     dim(medianxlsDF) # 32634 rows    4 columns
+     str(medianxlsDF)
+     medianxlsDF[1:3,]
+```
+
+# Load Zipcode Datafram
+```{r}
+# 3) Load the ‘zipcode’ package
+    
+    install.packages("zipcode", repos = "https://cran.r-project.org/src/contrib/Archive/zipcode/zipcode_1.0.tar.gz")
+    library(zipcode)
+    data(zipcode)
+    
+    str(zipcode)
+    
+    zipcodeDF <- zipcode
+    zipcodeDF <- na.omit(zipcodeDF) 
+    
+    length(unique(zipcodeDF$state))
+    unique(zipcodeDF$state)
+    
+    # zipcodeDF[1:5,]
+    
+    colnames(zipcodeDF)
+    # zipcodeDF[1:5,]
+
+#4) Merge the zip code information from the two data frames (merge into one dataframe)
+
+    mergeDF <- merge(medianxlsDF, zipcodeDF, by="zip")
+    
+    mergeDF[1:10,]
+    
+    dim(mergeDF)
+    dim(mergeDF)
+    length(unique(mergeDF$state))
+
+#5) Remove Hawaii and Alaska (just focus on the ‘lower 48’ states)
+    
+    mergeDF <- mergeDF[which(mergeDF$state != "AK" & mergeDF$state != "HI"), ]
+    mergeDF[1:10,]
+    length(unique(mergeDF$state))
+
+```
+
+# Step 2: Show the income & population per state
+```{r}
+# 1) Create a simpler dataframe, with just the average median income and the the population for each state.
+    
+    #tapply to calculate avg median by state
+    income <- tapply(mergeDF$median,mergeDF$state,mean)
+
+    # prepare column calues for state
+    state <- rownames(income)
+    
+    # prepare dataframe containing state names and average median values
+    avgIncome <- data.frame(state,income)
+    # avgIncome[1:3,]
+    
+    #reset row index
+    row.names(avgIncome) <- 1:nrow(avgIncome)
+    avgIncome[1:3,]
+    
+
+    #tapply to calculate avg population by state
+    population <- tapply(mergeDF$population,mergeDF$state,mean)
+
+    # prepare column calues for state
+    state <- rownames(population)
+    
+    # prepare dataframe containing state names and average population values
+    avgPopulation <- data.frame(state,population)
+    # avgpopulation[1:3,]
+    
+    #reset row index
+    row.names(avgPopulation) <- 1:nrow(avgPopulation)
+    avgPopulation[1:3,]
+     
+    #merge avgIncome and avgPopulation dataframes by state
+    
+    dfIncome <- merge(avgIncome,avgPopulation, by="state")
+    dfIncome[1:3,]
+    
+# 2) Add the state abbreviations and the state names as new columns (make sure the state names are all lower case)
+    dfIncome$stateName <- tolower(state.name[match(dfIncome$state,state.abb)])
+    dfIncome[1:3,]
+    
+# 3) Show the U.S. map, representing the color with the average median income of that state
+    
+    # load US States dataset.
+    us <- map_data("state")
+    
+    # Plot map using average median income
+    
+    dummyDF <- data.frame(state.name,stringsAsFactors = FALSE)
+    dummyDF$state.name <- tolower(dummyDF$state.name)
+    printDataInfo(dummyDF)
+    
+    theme <-theme(plot.title = element_text(hjust = 0.5),axis.title = element_text())
+   
+    map.incomeColor <- ggplot(dfIncome,aes(map_id=stateName))
+    map.incomeColor <- map.incomeColor + geom_map(map=us,aes(fill=income))
+    map.incomeColor <- map.incomeColor + expand_limits(x=us$long,y=us$lat)
+    map.incomeColor <- map.incomeColor + coord_map() 
+    map.incomeColor <- map.incomeColor +  scale_fill_viridis(option = "viridis", direction = -1) + theme_void() +
+    labs(x = NULL, 
+         y = NULL, 
+         title = "Average  Income in the U.S.", 
+         caption = "Data: MedianZIP_2_2.xlsx, 2020") +theme
+    
+    map.incomeColor
+    
+# 4) Create a second map with color representing the population of the state
+    
+    # Plot map using average population 
+    
+    # dummyDF <- data.frame(state.name,stringsAsFactors = FALSE)
+    # dummyDF$state.name <- tolower(dummyDF$state.name)
+    printDataInfo(dummyDF)
+    printDataInfo(dfIncome)
+   
+    map.popColor <- ggplot(dfIncome,aes(map_id=stateName))
+    map.popColor <- map.popColor + geom_map(map=us,aes(fill=population))
+    map.popColor <- map.popColor + expand_limits(x=us$long,y=us$lat)
+    map.popColor <- map.popColor + coord_map() 
+    map.popColor <- map.popColor + scale_fill_viridis(option = "plasma", direction = -1) + theme_void() +
+    labs(x = NULL, 
+         y = NULL, 
+         title = "Average Population in the U.S.", 
+         caption = "Data: MedianZIP_2_2.xlsx, 2020") +theme 
+    
+    map.popColor
+```
+
+
+# Step 3: Show the income per zip code
+```{r}
+
+# 1) Have draw each zip code on the map, where the color of the ‘dot’ is based on the median income. To make the map look appealing, have the background of the map be black.
+
+    printDataInfo(mergeDF)
+
+    mergeDF$stateName <- tolower(state.name[match(mergeDF$state,state.abb)])
+    mergeDF[1:3,]
+
+    map.zipColor <- ggplot(mergeDF,aes(map_id=stateName))
+    map.zipColor <- map.zipColor + geom_map(map=us, fill="black", color="white")
+    map.zipColor <- map.zipColor + expand_limits(x=us$long,y=us$lat)
+    map.zipColor <- map.zipColor + coord_map() 
+    map.zipColor <- map.zipColor + geom_point(data = mergeDF,aes(x = longitude, y = latitude, color=median))
+    map.zipColor <- map.zipColor + theme_void() +  
+      labs(x = NULL, 
+           y = NULL, 
+           title = "Average Income per zip code in the U.S.", 
+           caption = "Data: MedianZIP_2_2.xlsx, 2020") +theme 
+    
+    map.zipColor
+```
+
+#Step 4: Show Zip Code Density
+
+
+```{r}
+# 1) Now generate a different map, one where we can easily see where there are lots of zip codes, and where there are few (using the ‘stat_density2d’ function).
+
+    mergeDF[1:3,]
+
+    map.density2D <- map.zipColor + stat_density2d(aes(x = longitude, y = latitude), alpha = .5, h = .02, n = 300,
+                 geom = "density_2d", data = mergeDF)
+    
+    map.density2D +  xlab('Longitude') + ylab('Latitude') 
+
+```
+
+
+#Step 5: Zoom in to the region around NYC
+
+```{r}
+# 1) Repeat steps 3 & 4, but have the image / map be of the northeast U.S. (centered around New York).
+
+    #review NY Zipcodes
+    # mergeDF[1:3,]
+    # nyDF <- subset(mergeDF, state == "NY")
+    # nyDF[,c("state","stateName","latitude","longitude")]
+    # 
+    #import NY geocodes from library(ggmap)
+```
+
+
+```{r}
+library(ggmap)
+    # ?register_google
+    
+    register_google("AIzaSyDWp5xj2USZ5eOYnL7V5sJMx0w76d1NCDY")
+    
+    latlon <- geocode("new york,ny")
+    
+    latlon
+    
+     map.NY <- map.density2D+ geom_point(aes(x=latlon$lon,y=latlon$lat),color="yellow",size=5,na.rm = TRUE)
+     
+     map.NY <-  map.NY + xlim(latlon$lon-10, latlon$lon+10) + ylim(latlon$lat-10,latlon$lat+10) + coord_map()
+     map.NY +ggtitle("NYC Zoomed")
+
+```
+

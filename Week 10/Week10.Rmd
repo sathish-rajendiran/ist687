@@ -1,0 +1,160 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+install.packages("tm")
+install.packages("wordcloud")
+install.packages("pdftools")
+```
+```{r}
+library(tm)
+library(wordcloud)
+library(pdftools)
+
+# filename <- "/Users/sathishrajendiran/Documents/informatica.pdf"
+filename <- "/Users/sathishrajendiran/Documents/Dave_BizOps_Org_Announcement.pdf"
+
+# Read the PDF file
+doc <- readPDF(control = list(text = "-layout"))(elem = list(uri = filename), language = "en", id = "id1")
+str(doc)
+
+tail(doc,20 )
+
+words.vec <- VectorSource(doc)
+words.corpus <- Corpus(words.vec)
+words.corpus
+words.vec
+str(words.vec)
+str(words.corpus)
+
+tdm <- TermDocumentMatrix(words.corpus)
+
+str(tdm)
+
+inspect(tdm[1:50,1:2])
+
+m <- as.matrix(tdm)
+str(m)
+
+wordCounts <- rowSums(m)
+
+wordCounts <- sort(wordCounts,decreasing = TRUE)
+
+head(wordCounts)
+
+# wordCounts
+
+wordcloud(names(wordCounts),wordCounts)
+
+words.corpus <- tm_map(words.corpus, content_transformer(tolower))
+words.corpus <- tm_map(words.corpus, removePunctuation)
+words.corpus <- tm_map(words.corpus,removeNumbers)
+words.corpus <- tm_map(words.corpus, removeWords,stopwords("english"))
+
+wordcloud(names(wordCounts),wordCounts)
+
+wordcloud(names(wordCounts),wordCounts)
+
+```
+
+```{r}
+
+tdm <- TermDocumentMatrix(words.corpus)
+str(tdm)
+
+inspect(tdm[1:50,1:5])
+
+m <- as.matrix(tdm)
+str(m)
+
+wordCounts <- rowSums(m)
+
+wordCounts <- sort(wordCounts,decreasing = TRUE)
+
+head(wordCounts)
+str(wordCounts)
+summary(wordCounts)
+# wordCounts
+
+wordCounts <- wordCounts[2:168]
+
+wordcloud(names(wordCounts),wordCounts,rot.per = .08,colors = brewer.pal(8,"Paired"))
+
+
+```
+
+
+```{r}
+
+cloudFrame <- data.frame(word=names(wordCounts),freq=wordCounts)
+wordcloud(names(wordCounts),wordCounts)
+
+wordcloud(names(wordCounts),wordCounts,min.freq = 3,max.words = 50)
+wordcloud(names(wordCounts),wordCounts,min.freq = 3,max.words = 50, rot.per = 0)
+wordcloud(names(wordCounts),wordCounts,min.freq = 3,max.words = 50, rot.per = 0.35,colors = brewer.pal(8,"Dark2"))
+
+wordcloud(names(wordCounts),wordCounts,min.freq = 3,max.words = 50, rot.per = 0.35,colors = brewer.pal(8,"RdBu"))
+
+wordcloud(names(wordCounts),wordCounts,min.freq = 3, rot.per = -1,colors = brewer.pal(8,"Paired"))
+
+# 
+# findAssocs(tdm,"data",0.6)
+# findAssocs(tdm,"anaplan",0.6)
+# findAssocs(tdm,"informatica",0.6)
+
+```
+```{r}
+head(wordCounts)
+
+totalwords <- sum(wordCounts)
+words <- names(wordCounts)
+
+#read file and remove header
+
+postive_filename <- "/Users/sathishrajendiran/Documents/positive-words.txt"
+negative_filename <- "/Users/sathishrajendiran/Documents/negative-words.txt"
+p <- scan(postive_filename,character(0),sep = "\n")
+n <- scan(negative_filename,character(0),sep = "\n")
+
+head(p,30)
+
+#postive and negative word counts
+  matched <- match(words,p,nomatch = 0)
+  matched
+  
+  p[1012]
+  
+  pWords <- words[which(matched!=0)]
+  pWords
+
+  
+  pCounts <- wordCounts[which(matched!=0)]
+  pCounts
+  pPos <- sum(pCounts)
+
+  matched <- match(words,n,nomatch = 0)
+  matched
+  
+  p[588]
+  
+  nWords <- words[which(matched!=0)]
+  nWords
+  
+  nCounts <- wordCounts[which(matched!=0)]
+  nCounts
+  nNeg <- sum(nCounts)
+  
+  sentiment <- pPos/nNeg
+  sentiment
+  
+  nNeg
+  pPos
+  
+```
+

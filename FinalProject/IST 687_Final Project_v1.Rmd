@@ -1,0 +1,1023 @@
+---
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+-----------------------------------------------------------------------------------
+Title: "IST687 – Final Project | 2016 Olympics in Rio de Janeiro"
+Name: Sathish Kumar Rajendiran
+Group Number: 3
+Members: Deanna Zarrillo, Jeff Thomson, Sathish Kumar Rajendiran
+Date: 05/12/2020
+-----------------------------------------------------------------------------------
+Exercise: 
+        2016 Olympics, Rio de Janeiro, Brazil
+
+Countries:
+Number of Players:
+Male:
+Female:
+Medal Category: Gold, Silver, Bronze
+Games:
+Venues Played:
+
+￼
+1. Problem formulation
+2. Data cleanup
+3. Pre-processing
+4. Train-test Split
+5. Model Building
+6. Accuracy & Validation
+7. Prediction
+8. Confusion Matrix
+
+Descriptive Analysis
+Predictive Analysis
+Prescrptive Analysis
+
+# Install necessary packages
+
+```{r}
+# import libraries
+
+install.packages(pkgs=c("ggplot2","reshape2","ggeasy","dplyr","data.table","RSQLite","sqldf","reshape"),repos = "http://cran.us.r-project.org")
+
+library(ggplot2)
+library(ggeasy)
+library(reshape2)
+library(data.table)
+library(stats)
+library(dplyr)
+library(RSQLite)
+library(sqldf)
+library(reshape) 
+library(tidyverse)
+library(rvest)
+library(magrittr)
+library(ggmap)
+library(stringr)
+library(RSQLite)
+library(viridis)
+library(hrbrthemes)
+
+```
+
+
+#1. Import raw data into dataframes
+    1. Download files
+    2. Create data frames
+    3. Review meta data
+ 
+<!-- https://www.kaggle.com/rio2016/olympic-games -->
+
+```{r}
+
+#import csv files into data frames
+
+  athletes_fpath <- "/Users/sathishrajendiran/Documents/olympic-games/athletes.csv"
+  countries_fpath <- "/Users/sathishrajendiran/Documents/olympic-games/countries.csv"
+  events_fpath <- "/Users/sathishrajendiran/Documents/olympic-games/events.csv"
+
+  # function readFiles
+  readFiles <- function(fpath)
+    {
+    dftemp <- data.frame(read.csv(fpath),stringsAsFactors=FALSE)
+    return(dftemp)
+    }
+  
+  athletes <- readFiles(athletes_fpath) 
+  countries <- readFiles(countries_fpath) 
+  events <- readFiles(events_fpath) 
+
+  
+# function printDataInfo
+  printDataInfo <- function(myData)
+    {
+      strinfo <- str(myData)
+      cat("str:",strinfo,"\n")
+      
+      colnamesinfo <- colnames(myData)
+      cat("colnames:",colnamesinfo,"\n")
+      
+      diminfo <- dim(myData)
+      cat("dim:",diminfo,"\n")
+      
+      nrowinfo <- nrow(myData)
+      cat("nrow:",nrowinfo,"\n")
+      
+      nrowsinfo <- myData[1:3,]
+      return(nrowsinfo)
+     }
+  
+# printDataInfo
+  printDataInfo(athletes)  #dim: 11538 11
+  printDataInfo(countries) #dim: 201 4
+  printDataInfo(events) #dim: 306 6 
+  
+  
+ 
+```
+
+
+#2. Data Cleaning Process
+
+    1. Remove NA Characters
+    2. Change Data type 
+    3. Remove unwanted columns
+    4. Add columns (Copy + calculated)
+    5. Rename Columns
+    6. Re-arrange Columns
+    7. ?
+
+
+ 2.1 Athletes Dataframe
+
+
+```{r}
+# 2. Data Cleaning Process | 2.1 Athletes Dataframe
+
+#   Preview the data
+    
+    printDataInfo(athletes)
+    
+    
+      # 2.1.1   [ No need now]
+              #  Data format of dob column is as factor
+              #  Lets change it to yyyy-mm-dd format
+          
+              # athletes$dob = as.Date(athletes$dob,"%m/%d/%y")
+
+# 2.1.2
+    #  Check if the NAs in athletes and replace them  
+
+    clnames <- colnames(athletes)[colSums(is.na(athletes)) > 0]
+    clnames
+
+    
+    #  create subset of dataframe rows having NAs
+    na_athletes <- athletes[rowSums(is.na(athletes)) > 0,]
+    na_athletes # 680- rows
+    
+    # nasql_athletes <- sqldf("select name,nationality,dob,height,weight from na_athletes order by name")
+    # nasql_athletes <- sqldf("select name,nationality,dob,height,weight from na_athletes where dob is null order by name")
+    # nasql_athletes
+   
+    
+# 2.1.3    
+    # Replace dob, height & weight column's NA values
+    
+    # athletes[is.na(athletes$dob),]
+    # athletes[which(athletes$dob==""),]
+    athletes[athletes$nationality=="RUS" & athletes$name=="Pavel Sozykin",]$dob <-"12/25/1987"  # Update DOB of "Pavel Sozykin" born 25 December 1987
+    
+    #[ No need for now]
+        # athletes[athletes$nationality=="HUN" & athletes$name=="Adam Decker",]$dob <-"1984-02-29"  # Update DOB of "Adam DECKER" born 29 Feb 1984
+        # athletes[athletes$nationality=="UKR" & athletes$name=="Artem Morozov",]$dob <-"1980-02-29"  # Update DOB of "Artem Morozov" born 29 Feb 1980
+        # athletes[athletes$nationality=="GBR" & athletes$name=="Hannah Mills",]$dob <-"1988-02-29"  # Update DOB of "Hannah Mills" born 29 February 1988
+        # athletes[athletes$nationality=="SRB" & athletes$name=="Jovana Crnogorac",]$dob <-"1992-02-29"  # Update DOB of "Jovana Crnogorac" born 29 February 1992
+        # athletes[athletes$nationality=="IND" & athletes$name=="Prakash Nanjappa",]$dob <-"1976-02-29"   # Update DOB of "Prakash Nanjappa" born 29 February 1976
+        # athletes[athletes$nationality=="IND" & athletes$name=="Prakash Nanjappa",]
+        # athletes[athletes$nationality=="RUS" & athletes$name=="Pavel Sozykin" ,]   # validate other RUS athletes
+        
+# 2.1.4
+   
+    # Check if the NAs in column "weight" and replace them by the mean value of this column
+    athletes$weight[is.na(athletes$weight)] <- mean(athletes$weight, na.rm=TRUE)
+
+# 2.1.5
+  
+    # Check if the NAs in column "height" and replace them by the mean value of this column
+    athletes$height[is.na(athletes$height)] <- mean(athletes$height, na.rm=TRUE)   
+    
+    #  Check if the NAs in athletes and replace them   | Verify if NAs has been replaced 
+    # na_clnames <- colnames(athletes)[colSums(is.na(athletes)) > 0]
+    # na_clnames
+    # 
+ 
+# 2.1.5  
+    
+    #id Column in athletes doesnt mean much. lets remove it
+    athletes <- athletes[,!grepl("id",colnames(athletes))]
+    # athletes[1:3,]
+ 
+# 2.1.6  
+  
+    #Rename name,nationality columns 
+    colnames(athletes) <- c("fullname","country_code","sex","dob","height","weight","sport","gold","silver","bronze")
+    # athletes[1:3,]
+
+# 2.1.7 
+    
+    # Add columns age,tot_medals,weight_lbs,bmi_metric
+    # lets add Age as a calculated column to hold age of athletes. 
+    # This is by simply performing a data difference between athletes' dob and Jan 1st of 2016.
+    # athletes$age <- 0
+    
+    athletes$age <- round(as.numeric(as.Date(as.character("01/01/2016"), format="%m/%d/%Y") - as.Date(as.character(athletes$dob), format="%m/%d/%Y"))/365,0)
+    
+    #  lets calculate total number of medals by summing all medal categories (gold,silver and bronze)
+    athletes$tot_medals = athletes$gold+athletes$silver+athletes$bronze
+
+    #  convert players wieght into lbs
+    athletes$weight_lbs = 2.2 * athletes$weight
+ 
+    #  calculate BMI using metric formula
+    height_m2 <- ifelse(athletes$height >0, athletes$height * athletes$height,0)
+    athletes$bmi_metric = round(athletes$weight/height_m2,1)
+    
+    # athletes[1:3,]
+
+# 2.1.8  
+    
+    # re-order the columns
+
+    ath_col_order <- c("fullname","sex","country_code","sport","dob","age","height","weight","weight_lbs","bmi_metric","gold","silver","bronze","tot_medals")
+    athletes <- athletes[, ath_col_order]
+    athletes[1:3,]
+    
+    # athletes[which(athletes$age<0),]
+ 
+```
+
+
+```{r}
+#Age validation
+# athletes[which(athletes$age>0),]
+# athletes[which(athletes$age<0),]
+# # athletes$age
+# athletes[which(athletes$dob==""),]
+# athletes[is.na(athletes$age),]
+# 
+# athletes[athletes$country_code=="RUS" & athletes$fullname=="Pavel Sozykin",]
+# athletes$age <- round(as.numeric(as.Date(as.character("01/01/2016"), format="%m/%d/%Y") - as.Date(as.character(athletes$dob), format="%m/%d/%Y"))/365,0)
+# athletes
+
+    summary(athletes$age)
+    head(athletes[order(athletes$age),])
+    head(athletes[order(-athletes$age),])
+
+```
+
+#Charts definition
+```{r}
+
+# barplot(athletes$dob)
+    hcolor <- c("orange")
+    hfill <- c("steelblue")
+    htitle <- c("values distribution")
+    theme <-theme(plot.title = element_text(hjust = 0.5),axis.title = element_text())
+  
+   #valdiation of player's age across 
+    ggAgeboxplot <- ggplot(athletes,aes(age)) +geom_boxplot(fill = "steelblue", colour = "orange",outlier.colour = "red", outlier.shape = 1,na.rm=TRUE)+ggtitle("Player's age analysis")
+    
+    ggAgeboxplot+theme
+    
+
+
+```
+
+```{r}
+#Age by gender
+boxplot(age~sex,
+       data = athletes, main="Player's age by gender", 
+       ylab="",
+       xlab = "Age",
+       border="orange", 
+       col="steelblue",
+       freq=FALSE,
+       las=1, 
+       breaks=5,
+       horizontal = TRUE,na.rm=TRUE)
+
+boxplot(age~tot_medals,
+       data = athletes, main="Number of medals by Age", 
+       ylab="",
+       xlab = "",
+       border="orange", 
+       col="steelblue",
+       freq=FALSE,
+       las=1, 
+       breaks=5,
+       horizontal = TRUE,na.rm=TRUE)
+
+
+boxplot(tot_medals~sex,
+       data = athletes, main="Number of medals by Age & Gender", 
+       ylab="",
+       xlab = "",
+       border="orange", 
+       col="steelblue",
+       freq=FALSE,
+       las=1, 
+       breaks=5,
+       horizontal = TRUE,na.rm=TRUE)
+
+
+```
+
+
+#2. Data Cleaning Process | 2.2 Countries Dataframe
+
+    1. Remove NA Characters
+    2. Change Data type 
+    3. Remove unwanted columns
+    4. Add columns (Copy + calculated)
+    5. Rename Columns
+    6. Re-arrange Columns
+    7. ?
+
+```{r}
+
+
+#   Preview the data
+    
+    
+    printDataInfo(countries)
+
+# 2.2.1  
+  
+    #Rename code to country_code 
+    colnames(countries) <- c("country","country_code","population","gdp_per_capita")
+    # countries[1:3,]
+    
+    
+# 2.2.2
+   
+    #  Check if the NAs in athletes and replace them  
+    nacountry_clmns <- colnames(countries)[colSums(is.na(countries)) > 0]
+    nacountry_clmns
+
+    #  create subset of dataframe rows having NAs
+    na_countries <- countries[rowSums(is.na(countries)) > 0,]
+    na_countries # 25- rows
+    
+    # nasql_countries <- sqldf("select country,country_code,population,gdp_per_capita from na_countries order by country")
+    # nasql_countries #25 rows
+
+# 2.2.3
+    
+    # find out if any country_code from athletes dataframe  is missing in countries dataframe
+    countries[1:3,]
+    athletes[1:3,]
+    
+    x <- data.frame(countries[,1:2],stringsAsFactors=FALSE)
+    y <- data.frame(athletes$country_code,stringsAsFactors=FALSE)
+    colnames(y) <- c("country_code")
+    z <- data.frame(unique(anti_join(y,x, by="country_code",),stringsAsFactors=FALSE))
+    z
+
+    country_code <- c("IOA","KIR","KOS","MHL","MNE","ROT","ROU","SRB","SSD","TTO","TUV")
+    country <- c("Individual Olympic athletes","Kiribati","Kosovo","Marshall Islands","Montenegro","Refugee Olympic Team","Romania","Serbia","South Sudan","Trinidad and Tobago","Tuvalu")
+    population <- rep(0, 11)
+    gdp_per_capita <- rep(0, 11)
+
+    missing_countries <- data.frame(country_code,country,population,gdp_per_capita,stringsAsFactors=FALSE)
+    missing_countries
+
+    countries <- rbind(countries, missing_countries)
+
+    countries[1:3,]
+
+    clnames3 <- colnames(countries)[colSums(is.na(countries)) > 0]
+    clnames3
+```
+
+
+```{r }
+options(scipen=999) 
+ #valdiation of player's age across 
+
+
+    ggPopluationboxplot <- ggplot(countries,aes(population)) +geom_boxplot(fill = "#69b3a2", colour = "steelblue",outlier.colour = "red", outlier.shape = 1,na.rm=TRUE,orientation=NA)+ggtitle("boxplot - population spread")
+    
+    ggPopluationboxplot+theme
+    
+    
+  
+```
+
+#3. Join Athletes and Countries data frame
+
+    Join Athletes and Countries data frame
+    Re-arrange the columns in Athletes data frame
+
+```{r}
+#3.1
+    #jojn Athletes and Countries dataframe by nationality
+    
+    # printDataInfo(athletes)
+    # printDataInfo(countries)
+
+   athletes <- left_join(athletes,countries, by="country_code")
+
+#3.2
+    # re-order the columns
+    colnames(athletes)
+    
+    col_order <- c("fullname","sex","country","country_code","sport","dob","age","height","weight","weight_lbs","bmi_metric","gold","silver","bronze","tot_medals","population","gdp_per_capita")
+    athletes <- athletes[, col_order]
+    # athletes[1:3,]
+    
+#3.3
+    # review for NAs
+    na_athletes <- colnames(athletes)[colSums(is.na(athletes)) > 0]
+    na_athletes
+    
+    #create subset of dataframe rows having NAs
+    # na_athletes <- athletes[rowSums(is.na(athletes)) > 0,]
+    # na_athletes #509 rows
+    
+    # nasql_athletes <- sqldf("select fullname,country,dob,height,weight,weight_lbs,bmi_metric,population,gdp_per_capita from na_athletes order by fullname")
+    # nasql_athletes
+    
+    printDataInfo(athletes)
+```
+
+
+```{r}
+# sort(unique(events$sport))
+
+   # Values in Events and Athlets are at different levels; So, join doesnt really work between these two dataframes. 
+         # events[1:3,]
+    
+          #jojn Athletes and events dataframe by sport & id
+
+          # athletes <- left_join(athletes,events)
+          # athletes[1:3,]
+   
+
+```
+
+
+```{r}
+# Plot histogram on countries data to analyze the data spread for missing data elements
+
+  hcolor <- c("orange")
+  hfill <- c("steelblue")
+  htitle <- c("Histogram - Data availability")
+  theme <-theme(plot.title = element_text(hjust = 0.5),axis.title = element_text())
+  
+  gghist <- ggplot(data=melt(athletes),mapping = aes(x= value)) 
+  gghist+geom_histogram(bins = 20,color=hcolor,fill=hfill,na.rm = TRUE)+facet_wrap(~variable,scales = "free_x")+ ggtitle(htitle) + theme
+    
+  
+  
+```
+
+
+```{r}
+athletes[1:3,]
+```
+
+```{r}
+
+hmap <- ggplot(athletes, aes(x=sex, y=age))
+hmap <- hmap + geom_tile(aes(fill=tot_medals), color="white",na.rm=TRUE) 
+hmap <- hmap + scale_fill_gradient(low= "lightblue", high="red") + ggtitle("total medals by age and sex")
+hmap <- hmap + theme(
+  panel.border = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank()
+)
+hmap <- hmap + theme(
+  panel.background = element_rect(fill = "black")
+) 
+hmap 
+```
+
+
+```{r}
+h <- ggplot(athletes, aes(x=sex, y=age))
+h <- h + geom_tile(aes(fill=bmi_metric), color="white", na.rm=TRUE)
+h <- h + scale_fill_gradient(low="lightblue", high= "red")
+h <- h + theme(
+  panel.border = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank()
+)
+h <- h + theme(
+  panel.background = element_rect(fill = "black")
+) + ggtitle("BMI by age and sex")
+h
+```
+
+```{r}
+p2 <- ggplot(athletes, aes(x=sex, y=bmi_metric))
+p2 <- p2 + geom_tile(aes(fill=tot_medals), color="white",na.rm=TRUE) 
+p2 <- p2 + scale_fill_gradient(low= "lightblue", high="red") + ggtitle("total medals by sex and BMI")
+p2 <- p2 + theme(
+  panel.border = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank()
+)
+p2 <- p2 + theme(
+  panel.background = element_rect(fill = "black")
+) 
+p2 
+```
+
+
+```{r}
+
+athletes[1:3,]
+m <- ggplot(athletes, aes(x=country, y=age))
+m <- m + geom_tile(aes(fill=bmi_metric), na.rm=TRUE)
+m <- m + scale_fill_gradient(low="lightblue", high= "red") 
+m <- m + theme(axis.text.x = element_text(size=4, angle = 90))
+m <- m+ theme(
+  panel.border = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank()
+)
+m <- m + theme(
+  panel.background = element_rect(fill = "black")
+)
+m
+```
+
+
+```{r}
+p <- ggplot(athletes, aes(x=bmi_metric, y=age))
+p <- p + geom_tile(aes(fill=tot_medals), color="white",na.rm=TRUE) 
+p <- p + scale_fill_gradient(low= "lightblue", high="red") + ggtitle("total medals by age and BMI")
+p <- p + theme(
+  panel.border = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.grid.minor = element_blank()
+)
+p <- p + theme(
+  panel.background = element_rect(fill = "black")
+) 
+p 
+
+```
+
+
+
+```{r}
+    
+    athletes <- na.omit(athletes)  # Remove NAs from the data
+    
+    sqlResults <- sqldf("select  * from athletes limit 5")
+    # sqlResults
+    
+    nbrofplayers <- sqldf("select country, sex, count(fullname) nbr_players  from athletes group by country,sex order by nbr_players desc "  )
+    # nbrofplayers
+    
+    topcountries <- sqldf("select  country, count(fullname) nbr_players  from athletes group by country order by nbr_players desc limit 10"  )
+    # topcountries
+    
+    
+    toplevelcountries <- sqldf("select country, sum(gold) as nbr_gold, sum(silver) as nbr_silver,sum(bronze)  as nbr_bronze,sum(tot_medals) as nbr_medals from athletes group by country order by nbr_medals desc limit 10"  )
+    # toplevelcountries
+    
+    topplayers <- sqldf("select fullname,sex, sum(gold) as nbr_gold, sum(silver) as nbr_silver,sum(bronze)  as nbr_bronze,sum(tot_medals) as nbr_medals from athletes group by fullname,sex order by nbr_medals desc"  )
+    # topplayers
+    
+    topsports <- sqldf("select sport,count(fullname) nbr_players,sum(tot_medals) as nbr_medals from athletes group by sport order by nbr_medals desc,nbr_players desc limit 10"  )
+    # topsports
+    
+    topmedals <- sqldf("select  country, count(fullname) nbr_players ,sum(tot_medals) as tot_medals from athletes group by country order by tot_medals desc,nbr_players desc limit 10"  )
+    # topmedals
+    
+    topgender <- sqldf("select sport,sex, sum(tot_medals) as nbr_medals from athletes group by sport,sex order by nbr_medals desc"  )
+    # topgender
+    
+```
+```{r}
+
+# topcountries
+
+Countries <- topcountries$country [order (topcountries$nbr_players, decreasing = TRUE)]
+# Countries
+
+x <- subset(nbrofplayers,nbrofplayers$country %in% Countries)
+       
+ggplot (data = x,
+            aes (nbr_players,country)) +
+            geom_point (aes (color = sex), size = 5)
+
+```
+
+
+```{r}
+options(scipen=999)  # turn-off scientific notation like 1e+48
+# theme_set(theme_bw())  # pre-set the bw theme.
+
+
+# Scatterplot
+gg <- ggplot(topmedals, aes(x=tot_medals, y=nbr_players)) + 
+  geom_point(aes(col=country, size=tot_medals)) + 
+  geom_smooth(method="loess", se=F) + 
+  xlim(c(0, 300)) + 
+  ylim(c(0, 600)) + 
+  labs( y="Number of Players", 
+       x="Number of Medals", 
+       title="Number of Players Vs Number of Medals", 
+       caption = "Source: Olympic 2016")
+
+plot(gg)
+```
+
+
+```{r}
+
+
+topgender <- sqldf("select sport,sex, sum(tot_medals) as medals from athletes group by sport,sex order by medals desc"  )
+# topgender
+    
+str(topgender)
+
+ggplot(topgender, aes(fill=sex, y=medals, x=sport)) + geom_bar(position="stack", stat="identity")+
+    scale_color_brewer(palette = "Paired")+
+    ggtitle("Sports vs Players's Gender vs Number of Goals") +
+    theme(axis.text.x = element_text(face="plain", color="black", size=12, angle=90))
+  
+```
+
+```{r}
+
+
+ 
+# Create dataset
+data <- data.frame(
+  individual=paste( "Mister ", seq(1,60), sep=""),
+  value=sample( seq(10,100), 60, replace=T)
+)
+ # data
+ # athletes
+data <- sqldf("select sport as individual, sum(tot_medals) as value from athletes  group by sport order by sport"  )
+
+# data
+    
+# Set a number of 'empty bar'
+empty_bar <- 10
+ 
+# Add lines to the initial dataset
+to_add <- matrix(NA, empty_bar, ncol(data))
+colnames(to_add) <- colnames(data)
+data <- rbind(data, to_add)
+# data
+data$id <- seq(1, nrow(data))
+ 
+# Get the name and the y position of each label
+label_data <- data
+number_of_bar <- nrow(label_data)
+angle <- 90 - 360 * (label_data$id-0.5) /number_of_bar     # I substract 0.5 because the letter must have the angle of the center of the bars. Not extreme right(1) or extreme left (0)
+label_data$hjust <- ifelse( angle < -90, 1, 0)
+label_data$angle <- ifelse(angle < -90, angle+180, angle)
+ 
+# Make the plot
+p <- ggplot(data, aes(x=as.factor(id), y=value)) +       # Note that id is a factor. If x is numeric, there is some space between the first bar
+  geom_bar(stat="identity", fill=alpha("green", 0.4)) +
+  ylim(-100,350) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = unit(rep(-1,4), "cm") 
+  ) +
+  coord_polar(start = 0) + 
+  geom_text(data=label_data, aes(x=id, y=value+5, label=individual, hjust=hjust), color="black", fontface="bold",alpha=0.6, size=3.2, angle= label_data$angle, inherit.aes = FALSE,na.rm = TRUE ) 
+ 
+p
+
+```
+
+```{r}
+
+df1 <- sqldf("select fullname, gold, silver,bronze from athletes")  #--where fullname like 'Michael Phelps
+# df1
+
+
+mdata <- melt(df1, id=c("fullname"))
+mdata <- mdata[order(-mdata$value,mdata$fullname),]
+mdata <- mdata[which(mdata$value>=1),]
+# mdata
+# mdata[mdata$fullname =="Michael Phelps",]
+
+
+# topcountries
+
+Countries <- topcountries$country [order (topcountries$nbr_players, decreasing = TRUE)]
+# Countries
+
+x <- subset(nbrofplayers,nbrofplayers$country %in% Countries)
+    
+p1 <- sqldf("select fullname,sum(tot_medals) as medals from athletes group by fullname order by medals desc")
+p1 <- p1[which(p1$medals>=3),]
+
+
+players <- p1$fullname[order(p1$medals, decreasing = TRUE)] 
+# players
+
+x <- subset(mdata,mdata$fullname %in% players)
+#x
+
+v <- ggplot(x)+aes(x=fullname,y = value,fill =variable)+geom_col()+ coord_flip() + scale_colour_brewer(palette = "Set1")+ theme_dark()
+ v
+
+```
+
+```{r}
+# options(scipen=999) 
+#  #valdiation of player's age across 
+# 
+# 
+#     ggPopluationboxplot <- ggplot(countries,aes(population)) +geom_boxplot(fill = "#69b3a2", colour = "steelblue",outlier.colour = "red", outlier.shape = 1,na.rm=TRUE,orientation=NA,xmin = min(x), lower = quantile(x, 0.25), middle = median(x), upper = quantile(x, 0.75), xmax = max(x),stat = "identity")+ggtitle("boxplot - population spread")
+#     
+#     ggPopluationboxplot+theme
+    
+```
+
+
+
+```{r}
+# Create new table that sums the total medals by country
+# Note: Some code used from this website: https://www.r-bloggers.com/how-to-make-a-global-map-in-r-step-by-step/
+
+Top15<- athletes %>%
+  group_by(country) %>%
+  summarise(tot_medals = sum(tot_medals))
+
+#Order from highest to lowest
+Top15<- Top15[order(-Top15$tot_medals),]
+
+#Only take the top 15
+Top15<- Top15[1:15,]
+
+#create map showing total medals per country
+# Updates country in Top15 to Character
+Top15<- Top15 %>% mutate_if(is.factor, as.character)
+
+#Update Country Names for United States to USA and United Kingdom to UK
+Top15$country <- recode(Top15$country,'United States' = 'USA','United Kingdom' = 'UK')
+
+Top15$rank<- c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15) #add ranking order to use for colouring map by most medals
+
+#get world map
+world_map<-map_data("world")
+ggplot(world_map, aes(x=long, y = lat, group=group))+
+  geom_polygon(fill="lightgray", colour="black")
+
+world.map.medals<-left_join(world_map,Top15,by=c('region'='country'))
+
+world.map.medals<-world.map.medals %>% mutate(fill_flg = ifelse(is.na(rank),F,T))
+
+Top15map<- ggplot() +
+  geom_polygon(data = world.map.medals, aes(x = long, y = lat, group = group, fill = fill_flg,colour=rank)) +
+  scale_fill_hue(l=40,c=35) +
+  labs(title = '2016 Olympics, Top15 Country with Most Total Medals')
+Top15map
+```
+
+```{r}
+#Scatterplot of Sport, Age and Total Medals ranked by Top 10 sports with most total medals
+dfAgeSportMedals<- athletes %>%
+  group_by(sport) %>%
+  summarise(age = mean(age),tot_medals = sum(tot_medals))
+dfAgeSportMedals<- dfAgeSportMedals[order(-dfAgeSportMedals$tot_medals),]
+dfAgeSportMedals<- dfAgeSportMedals[1:10,]
+dfAgeSportMedals
+
+ggplot(dfAgeSportMedals,aes(x=sport,y=age))+geom_point(aes(size=tot_medals,color=tot_medals))
+
+```
+
+
+```{r}
+
+#Scatterplot of Sport, BMI and Total Medals ranked by Top 10 sports with most total medals
+dfbmiSportMedals<- athletes %>%
+  group_by(sport) %>%
+  summarise(bmi = mean(bmi_metric),tot_medals = sum(tot_medals))
+dfbmiSportMedals<- dfbmiSportMedals[order(-dfbmiSportMedals$tot_medals),]
+dfbmiSportMedals<- dfbmiSportMedals[1:10,]
+dfbmiSportMedals
+
+#Scatterplot of Sport, Age and Total Medals
+ggplot(dfbmiSportMedals,aes(x=sport,y=bmi))+geom_point(aes(size=tot_medals,color=tot_medals))
+
+```
+
+
+
+
+```{r}
+#1.Regression Analysis- Age versus Total Medals
+
+Age_totMedals<-athletes %>%
+  group_by(age) %>%
+  summarise(tot_medals = sum(tot_medals))
+
+Age_totMedals<-Age_totMedals[order(-Age_totMedals$age),]
+
+# #Only take positive
+# Age_totMedals<- Age_totMedals[1:35,] # CAN DELETE ONCE INTEGRATE SATHISH's CODE THAT FIXES NEGATIVE AGES
+
+plot(Age_totMedals$age,Age_totMedals$tot_medals)
+
+Reg_Age<-lm(formula = tot_medals~age,data=Age_totMedals)
+summary(Reg_Age)
+
+# Assuming an alpha of 0.05, the p-value of 0.0371 indicates that age does have a correlation to total medals won
+
+```
+
+```{r}
+
+#2.Regression Analysis-BMI versus Total Medals
+
+#sathish ----
+BMI_totMedals<-athletes %>%
+  group_by(bmi_metric) %>%
+  summarise(tot_medals = sum(tot_medals))
+
+BMI_totMedals<-BMI_totMedals[order(-BMI_totMedals$bmi_metric),]
+
+plot(BMI_totMedals$bmi_metric,BMI_totMedals$tot_medals)
+
+#sathish ----
+
+Reg_BMI<-lm(formula = tot_medals~bmi_metric,data=BMI_totMedals)
+summary(Reg_BMI)
+
+#  Assuming an alpha of 0.05, the p-value of 0^-14 indicates that BMI does have a correlation to total medals won.  
+```
+
+
+```{r}
+#3 Run regression for Population and Total Medals
+
+#sathish ----
+Pop_totMedals<-athletes %>%
+  group_by(population) %>%
+  summarise(tot_medals = sum(tot_medals))
+
+Pop_totMedals<-Pop_totMedals[order(-Pop_totMedals$population),]
+
+plot(Pop_totMedals$population,Pop_totMedals$tot_medals)
+
+#sathish ----
+
+Reg_Pop<-lm(formula = tot_medals~population,data=Pop_totMedals)
+summary(Reg_Pop)
+
+#  Assuming an alpha of 0.05, the p-value of 0^-6 indicates that population does have a correlation to total medals won.Of note is that the p-value for BMI & population is smaller than age, so we will run the regression for age, BMI & population as out independent variables and analyze the output.
+```
+
+
+```{r}
+#multilinear Regression to predict toal medals from BMI, Age and Population
+
+#sathish -----
+pairs(~tot_medals+bmi_metric+age+population, data = athletes)  # scotter plot
+#sathish -----
+
+Reg_Combined<-lm(formula = tot_medals~bmi_metric+age+population,data=athletes)
+summary(Reg_Combined)
+
+# From the regression output, population and BMI have a p-value below our alpha of 0.05 indicating they have a stronger correlation to total medals won than age.
+
+```
+
+```{r}
+#Multi-linear regression to predict total medals from the average age and sport
+
+
+
+All_Sports<- athletes %>%
+  group_by(sport) %>%
+  summarise(age = mean(age), tot_medals = sum(tot_medals))
+
+All_Sports$rank<- c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28) #add ranking order
+
+#sathish -----
+pairs(~tot_medals+age+rank, data = All_Sports)  # scotter plot
+#sathish -----
+
+
+agesport_Reg<-lm(formula = tot_medals~age+rank,data=All_Sports)
+summary(agesport_Reg)
+
+#
+```
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+countrieswithmedals <- athletes %>% filter(tot_medals>0) %>%  group_by(country) %>% summarize(medals=sum(tot_medals,na.rm = TRUE), gold = sum(gold),silver = sum(silver),bronze = sum(bronze))
+# countrieswithmedals
+
+countriesbyRank <- countrieswithmedals[order(-countrieswithmedals$medals),]
+countriesbyRank <- countriesbyRank %>% mutate(rank = 1:n())
+col_order <- c("rank","country","medals","gold","silver","bronze")
+# countriesbyRank
+countriesbyRank <- countriesbyRank[, col_order]
+
+Top5 <- data.frame(countriesbyRank[1:5,],stringsAsFactors = FALSE )
+Top5$country <- recode(Top5$country
+                                ,'United States' = 'USA'
+                                ,'United Kingdom' = 'UK'
+                                )
+# Top5
+
+map.world <- map_data("world")
+
+# glimpse(countriesbyRank)
+# as.factor(Top5$country) %>% levels()
+
+
+df.country_points <- as.data.frame(Top5$country,stringsAsFactors = F)
+colnames(df.country_points) <- c("country")
+df.country_points$country <- as.character(df.country_points$country)
+
+# ?register_google
+
+register_google("AIzaSyDWp5xj2USZ5eOYnL7V5sJMx0w76d1NCDY")
+
+df.country_points <- mutate_geocode(df.country_points, country)
+glimpse(df.country_points)
+
+df.country_points <- left_join(df.country_points,Top5)
+df.country_points
+
+
+map.world_olympics <- left_join(map.world, Top5, by = c('region' = 'country')) %>% mutate(fill_flg = ifelse(is.na(rank),F,T))
+# map.world_olympics <- rename(map.world_olympics, c("country"="region"))
+
+
+# unique(map.world_olympics$region)
+# colnames(map.world_olympics)
+
+map.world_olympics <- map.world_olympics %>% mutate(fill_flg = ifelse(fill_flg=="TRUE", region, fill_flg))
+
+# colnames(map.world_olympics)
+# unique(map.world_olympics$fill_flg)
+
+map.world_olympics$fill_flg <- recode(map.world_olympics$fill_flg,'FALSE' = 'Others')
+
+#rename column name
+names(map.world_olympics)[names(map.world_olympics)=="fill_flg"] <- "Countries"
+# colnames(map.world_olympics)
+# map.world_olympics
+# unique(map.world_olympics[c("Countries")])
+# df.country_points
+```
+
+
+```{r}
+
+#map with dotted plot
+top5.map <- ggplot() + geom_polygon(data = map.world_olympics, aes(x = long, y = lat, group = group),show.legend = FALSE,fill="white",color="#CCCCCC") 
+top5.map <- top5.map +  geom_point(data = df.country_points, aes(x = lon, y = lat,color=country,size=order(-rank)) )
+        
+top5.map +  labs(x = NULL, 
+                  y = NULL, 
+                  title = " Top 5 Countries by Number of medals", 
+                  caption = "Data: Olympics, 2016") + theme () 
+
+
+
+
+```
+
+
+
+```{r}
+#Colour Palette
+
+pal <- c(
+  "USA" = "red",
+  "Germany" = "orange", 
+  "UK" = "yellow", 
+  "Russia" = "forestgreen" ,
+  "China" ="blue",
+  "Others" ="#CCCCCC"
+)
+
+mapG <- ggplot() + geom_polygon(data = map.world_olympics, aes(x = long, y = lat, group = group,fill=Countries),show.legend = TRUE)+ scale_fill_manual(
+    values = pal,
+    limits = names(pal)
+  )
+mapG <- mapG +  
+                 labs(x = NULL, 
+                  y = NULL, 
+                  title = " Top 5 Countries by Number of medals", 
+                  caption = "Data: Olympics, 2016") +theme 
+
+mapG
+
+```
+
+

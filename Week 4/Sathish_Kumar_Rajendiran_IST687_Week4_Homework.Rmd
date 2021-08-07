@@ -1,0 +1,234 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+-----------------------------------------------------------------------------------
+Title: "IST687 – Samples HW"
+Name: Sathish Kumar Rajendiran
+Week: 4
+Date: 05/01/2020
+-----------------------------------------------------------------------------------
+Exercise: 
+        Let’s continue our exploration of sampling.
+
+
+Step 1: Write a summarizing function to understand the distribution of a vector
+
+```{r}
+# Intall moments package
+#install.packages('moments')
+library(moments)
+```
+
+```{r}
+
+# 1. The function, call it ‘printVecInfo’ should take a vector as input
+# 2. The function should print the following information:
+#     a. Mean
+#     b. Median
+#     c. Min & max
+#     d. Standard deviation
+#     e. Quantiles (at 0.05 and 0.95)
+#     f. Skewness
+#   Note for skewness, you can use the function in the ‘moments’ library.
+# 3. Test the function with a vector that has (1,2,3,4,5,6,7,8,9,10,50). 
+     
+      myVector <- c(1,2,3,4,5,6,7,8,9,10,50)
+  
+      # define function printVecInfo
+      printVecInfo <- function(myVector)
+        {
+          meaninfo <- mean(myVector)
+          cat("mean:",meaninfo,"\n")
+          medianinfo <- median(myVector)
+          cat("median:",medianinfo,"\n")
+          mininfo <- min(myVector)
+          # print(paste("min:",mininfo))
+          maxinfo <- max(myVector)
+          cat("min:",mininfo, "max:",maxinfo,"\n")
+          stddevinfo <- sd(myVector)
+          cat("sd:",stddevinfo,"\n")
+          quantile5percent <- quantile(myVector, probs = 0.05)
+          quantile95percent <- quantile(myVector, probs = 0.95)
+          cat("quantile (0.05 - 0.95):",quantile5percent,"--",quantile95percent,"\n")
+          skewnessinfo <- skewness(myVector)
+          cat("skewness:",skewnessinfo,"\n")
+         }
+      printVecInfo(myVector)
+```
+
+Step 2: Creating Samples in a Jar
+
+
+```{r}
+# 4. Create a variable ‘jar’ that has 50 red and 50 blue marbles
+# (hint: the jar can have strings as objects, with some of the strings being ‘red’ and some of the strings being ‘blue’
+    
+    jar <- c(replicate(50,"red"),replicate(50,"blue"))
+    # jar
+
+# 5. Confirm there are 50 reds by summing the samples that are red
+
+    tJar <- table(jar)
+    tJar
+
+    nbrBycolor <- function(v,c)
+    {
+      # n <- tJar[names(tJar)== c]
+      l <- length(v)
+      n <- length(grep(c, v))
+      cat( "\n number of ",c, "color marble(s) :",n)
+      cat( "\n % of ",c, "marble(s) :",n/l*100,"\n")
+    }
+    
+    nbrBycolor(jar,"red")
+    nbrBycolor(jar,"blue")
+    
+  
+```
+
+Sampling
+
+```{r}
+
+#     6. Sample 10 ‘marbles’ (really strings) from the jar. How many are red? What was the
+# percentage of red marbles?
+    
+    sampleSize <- 10
+
+    sjar <- sample(jar,sampleSize, replace = TRUE)
+    
+    nbrBycolor(sjar,"red")
+    # nbrBycolor(sjar,"blue")
+
+```
+```{r}
+#   7. Do the sampling 20 times, using the ‘replicate’ command.
+#   This should generate a list of 20 numbers.
+#   Each number is the mean of how many reds there were in 10 samples.
+#   Use your printVecInfo to see information of the samples.
+#   Also generate a histogram of the samples.
+
+    ncolor <- function(v,c,s)
+      {
+        sjar <- sample(v,s,replace = TRUE)
+        n <- length(grep(c, sjar))
+        return(n)
+      }
+    
+    ncolor(jar,"red",10)  # how many reds there were in 10 samples.
+    
+    x <- replicate(20,mean(replicate(10,ncolor(jar,"red",10),simplify = TRUE)),simplify = TRUE)
+
+    cat("\n")
+    
+    x
+
+    printVecInfo(x)
+    
+    # hist(x)
+    
+```
+
+
+```{r}
+# 8. Repeat #7, 
+# but this time, sample the jar 100 times. 
+# You should get 20 numbers, this time each number represents 
+# the mean of how many reds there were in the 100 samples. 
+# Use your printVecInfo to see information of the samples. 
+# Also generate a histogram of the samples.
+
+      ncolor(jar,"red",100)  # how many reds there were in 10 samples.
+      
+      newX <- replicate(20,mean(replicate(100,ncolor(jar,"red",100),simplify = TRUE)),simplify = TRUE)
+      
+      cat("\n")
+      
+      newX
+      
+      printVecInfo(newX)
+      
+      # hist(newX)
+
+
+```
+
+
+```{r}
+# 9. Repeat #8, 
+# but this time, replicate the sampling 100 times. 
+# You should get 100 numbers, 
+# this time each number represents the mean of how many reds there were in the 100 samples. 
+# Use your printVecInfo to see information of the samples. 
+# Also generate a histogram of the samples.
+
+      ncolor(jar,"red",100)  # how many reds there were in 10 samples.
+      
+      brandnewX <- replicate(100,mean(replicate(100,ncolor(jar,"red",100),simplify = TRUE)),simplify = TRUE)
+      
+      cat("\n")
+      
+      brandnewX
+      
+      printVecInfo(brandnewX)
+      
+      # hist(brandnewX)
+
+```
+
+Step 3: Explore the airquality dataset
+
+```{r}
+
+# 10. Store the ‘airquality’ dataset into a temporary variable
+# 11. Clean the dataset (i.e. remove the NAs)
+# 12. Explore Ozone, Wind and Temp by doing a ‘printVecInfo’ on each as well as
+# generating a histogram for each
+
+?airquality
+
+# New York Air Quality Measurements
+# Description
+# Daily air quality measurements in New York, May to September 1973.
+# 
+# Usage
+# airquality
+
+# 10. Store the ‘airquality’ dataset into a temporary variable
+
+      myAirquality <- airquality
+      str(myAirquality)
+      
+      head(myAirquality)
+      tail(myAirquality)
+
+# 11. Clean the dataset (i.e. remove the NAs)
+
+      myAirquality <- na.omit(myAirquality)
+
+      myAirquality
+      myAirquality$Ozone
+      
+
+# 12. Explore Ozone, Wind and Temp by doing a ‘printVecInfo’
+      colnames(myAirquality)
+      
+      ozoneAir <- myAirquality$Ozone
+      windAir <- myAirquality$Wind
+      tempAir <- myAirquality$Temp
+      
+      printVecInfo(ozoneAir)
+      printVecInfo(windAir)
+      printVecInfo(tempAir)
+      
+      hist(ozoneAir)
+      hist(windAir)
+      hist(tempAir)
+```
+
+
+

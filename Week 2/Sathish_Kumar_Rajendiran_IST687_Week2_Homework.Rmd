@@ -1,0 +1,101 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+-----------------------------------------------------------------------------------
+Title: "IST687 – Writing functions and doing some initial data analysis"
+Name: Sathish Kumar Rajendiran
+Week: 2
+Date: 04/18/2020
+-----------------------------------------------------------------------------------
+Exercise: 
+      Explore the mtcars dataset (which is already included in R). Copy the mtcars dataset into a new variable (called it myCars), so that if you mess up, you can start again very easily (by copying mtcars into myCars again)
+      
+      { }
+Step 0: Clone the dataset into new Dataframe.
+
+```{r}
+# clone mtcars into mycarsdf dataframe
+  mycarsdf <- data.frame(mtcars)
+  head(mycarsdf,10)
+  
+  mycarsdf <- cbind(name = rownames(mycarsdf), mycarsdf)
+  rownames(mycarsdf) <- 1:nrow(mycarsdf)
+  head(mycarsdf,10)
+```
+  
+Step 1: What is the hp (hp stands for “horse power”)
+
+```{r}
+
+#   1) What is the highest hp?
+      maxHp <- max(mycarsdf$hp)
+      sprintf("%s is the highest horse power!", maxHp)
+      
+#   2) Which car has the highest hp?
+      maxHp_index <- which.max(mycarsdf$hp)
+      print(mycarsdf[maxHp_index,1],max.levels = 0)
+      #Maserati Bora
+      
+```
+
+Step 2: Explore mpg (mpg stands for “miles per gallon”)
+
+```{r}
+
+#   3) What is the highest mpg?
+
+      maxMPG <- max(mycarsdf$mpg)
+      sprintf("%s is the highest mpg!", maxMPG)
+
+#   4) Which car has the highest mpg?
+      maxMPG_index <- which.max(mycarsdf$mpg)
+      print(mycarsdf[maxMPG_index,1],max.levels = 0)     
+      #Toyota Corolla
+  
+#   5) Create a sorted dataframe, based on mpg    
+      
+      carsDFbyMPG <- mycarsdf[order(-mycarsdf$mpg),]
+      head(carsDFbyMPG,5)
+      tail(carsDFbyMPG,5)
+      
+```
+
+Step 3: Which car has the “best” combination of mpg and hp?
+```{r}
+#  6) What logic did you use?
+
+# lets divide hp by mpg to find the best value car
+    mycarsdf$hpBympg <- mycarsdf$hp/mycarsdf$mpg
+
+# re-arrange columns
+    bestcarsDF <- mycarsdf[c("name","mpg","hp","hpBympg","cyl","disp","drat","wt","qsec","vs","am","gear","carb")]
+    bestcarsDF
+    
+#  7) Which car?
+# find the car that has best of value
+    bestcar_index <- which.max(bestcarsDF$hpBympg)
+    print(bestcarsDF[bestcar_index,1],max.levels = 0) 
+    
+```
+
+Step 4: Which car has “best” car combination of mpg and hp, where mpg and hp must be given equal weight?
+```{r}
+    
+    bestcarsDF$scalempg <- scale(bestcarsDF$mpg)
+    bestcarsDF$scalehp  <- scale(bestcarsDF$hp)
+    cols <- c('scalempg','scalehp')
+    bestcarsDF$mostvalued <- apply(bestcarsDF[,cols],1,sum)
+    
+    finaldf <- bestcarsDF[c("name","mpg","hp","hpBympg","scalempg","scalehp","mostvalued")]
+    finaldf <- finaldf[order(-finaldf$mostvalued),]
+    
+    mostvalued_index <- which.max(finaldf$mostvalued)
+    print(finaldf[mostvalued_index,1],max.levels = 0) 
+    #Maserati Bora
+```
+
+

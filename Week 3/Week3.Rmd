@@ -1,0 +1,184 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+```
+
+
+```{r}
+tinydata <- c(1,2,1,2,3,3,3,4,5,4,5)
+myMode <- function(myVector)
+{
+  uniqueValues <- unique(myVector)
+  return(uniqueValues)
+}
+
+myMode(tinydata)
+```
+
+
+```{r}
+```
+
+
+```{r}
+tinydata <- c(1,2,1,2,3,3,3,4,5,4,5)
+myMode <- function(myVector)
+{
+  uniqueValues <- unique(myVector)
+  uniqueCounts <- tabulate(myVector)
+  return(uniqueCounts)
+}
+
+myMode(tinydata)
+```
+
+
+```{r}
+```
+
+
+```{r}
+tinydata <- c(1,2,1,2,3,3,3,4,5,4,5)
+myMode <- function(myVector)
+{
+  uniqueValues <- unique(myVector)
+  uniqueCounts <- tabulate(myVector)
+  return(uniqueValues[which.max(uniqueCounts)])
+}
+
+myMode(tinydata)
+```
+
+
+```{r}
+```
+
+
+```{r}
+tinydata <- c(tinydata,5,5,5)
+
+myMode(tinydata)
+```
+
+
+```{r}
+```
+
+
+```{r}
+tinydata <- c(tinydata,1,1,1)
+myMode(tinydata)
+```
+
+
+```{r}
+tinydata <- c(tinydata,9,9,9,9,9,9,9)
+
+tinydata
+myMode(tinydata)
+```
+
+
+```{r}
+myMode <- function(myVector)
+{
+  uniqueValues <- unique(myVector)
+  uniqueCounts <- tabulate(match(myVector,uniqueValues))
+  return(uniqueValues[which.max(uniqueCounts)])
+}
+
+myMode(tinydata)
+```
+
+
+```{r}
+myData <- mfv(tinydata)
+myData
+tinydata <- c(tinydata,9,9,9,9,9,9,9)
+```
+
+
+```{r}
+mtcars
+
+myCars <- mtcars
+
+rownames(myCars)
+colnames(myCars)
+```
+
+
+```{r}
+```
+
+
+```{r}
+myMpg <-function() {
+  index <- which.max(myCars$mpg)
+  car <- myCars[index,]
+  return(car)
+}
+
+myMpg()
+```
+
+
+```{r}
+myMpgNames <-function() {
+  index <- which.max(myCars$mpg)
+  rnames <- rownames(myCars)
+  car <- rnames[index]
+  return(car)
+}
+myMpgNames()
+
+```
+
+
+```{r}
+myCars$mpg
+col.index <- colnames(myCars) =="mpg"
+
+col.index
+```
+
+
+```{r}
+```
+
+
+```{r}
+bestwithIndex <-function(col.index) {
+  index <- which.max(myCars[,col.index])
+  rnames <- rownames(myCars)
+  car <- rnames[index]
+  return(car)
+}
+
+bestwithIndex(2)
+
+```
+
+
+```{r}
+best <-function(col.name) {
+  col.index <- which(colnames(myCars)==col.name)
+  index <- which.max(myCars[,col.index])
+  rnames <- rownames(myCars)
+  car <- rnames[index]
+  return(car)
+}
+
+best("hp")
+
+```
+
+
+

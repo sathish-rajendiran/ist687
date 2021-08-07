@@ -1,0 +1,95 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+#install libraries
+#tinytex::install_tinytex()
+
+-----------------------------------------------------------------------------------
+Title: "IST687 – Intro Homework"
+Name: Sathish Kumar Rajendiran
+Week: 1
+Date: 04/08/2020
+-----------------------------------------------------------------------------------
+Exercise: 
+      Define the following vectors, which represent the weight and height of people
+      on a particular team (in inches and pounds):
+
+Declare Variables:
+
+```{r}
+
+#  Declare height
+    height <- c(59,60,61,58,67,72,70)
+
+#  Declare weight
+    weight <- c(150,140,180,220,160,140,130)
+    
+#   Declare variable "a"
+    a <- 150
+```
+
+Step 1: Calculating means
+
+```{r}
+# 1) Compute, using R, the average height (called mean in R)
+      meanH <- mean(height)
+
+# 2) Compute, using R, the average height (called mean in R)
+      meanW <- mean(weight)
+      
+# 3) Calculate the length of the vector ‘height’ and ‘weight’
+      lengthH <- length(height)
+      lengthW <- length(weight)
+      
+# 4) Calculate the sum of the heights
+      sumH <- sum(height)
+      sumW <- sum(weight)
+
+# 5) Compute the average of both height and weight, by dividing the sum (of the height or the width, as appropriate), by the length of the vector. How does this compare to the ‘mean’ function?
+      
+      avgH <- sumH/lengthH
+      avgW <- sumW/lengthW
+
+      if(meanH == avgH)  "Mean and Avearge heights are same"
+      
+      if(meanW == avgW)  "Mean and Avearge weights are same"
+```
+
+Step 2: Using max/min functions
+
+```{r}
+# 6) Compute the max height, store the result in ‘maxH’
+      maxH <- max(height)
+
+# 7) Compute the min weight, store the results in ‘minW’
+      minW <- min(weight)
+
+```
+
+Step 3: Vector Math
+
+```{r}
+
+# 8) Create a new vector, which is the weight + 5 (every person gained 5 pounds)
+      newWeight <- weight+5
+
+# 9) Compute the weight/height for each person, using the new weight just created
+      newWoverH <- newWeight/height
+
+
+```
+
+Step 4: Using Conditional if statements
+
+```{r}
+# 10) Write the R code to test if max height is greater than 60 (output “yes” or “no”)
+      if(maxH > 60) "yes" else "no"
+  
+# 11) Write the R code to if min weight is greater than the variable ‘a’ (output “yes” or “no”)
+      if(minW > a) "yes" else "no"
+
+```
+
+

@@ -1,0 +1,239 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+-----------------------------------------------------------------------------------
+Title: "IST687 – Text Mining HW"
+Name: Sathish Kumar Rajendiran
+Week: 10
+Date: 06/10/2020
+-----------------------------------------------------------------------------------
+Exercise: 
+        Text Mining HW
+        
+        Your task for this homework is to adapt the lab that we did in class, to compute the score for the MLK speech using the AFINN word list (as opposed to the positive and negative word lists).
+
+```{r}
+
+# import libraries
+
+install.packages(pkgs=c("ggplot2","reshape2","ggeasy","data.table","tm","pdftools","wordcloud"),repos = "http://cran.us.r-project.org")
+
+
+library(ggplot2)
+library(ggeasy)
+library(reshape2)
+library(data.table)
+library(stats)
+library(tm)
+library(wordcloud)
+library(pdftools)
+
+```
+
+<!-- 1. First read in the AFINN word list. Note that each line is both a word and a score (between -5 and 5). You will need to split the line and create two vectors (one for words and one for scores). -->
+
+```{r}
+
+# import affin list into dataset
+affin <- read.delim("/Users/sathishrajendiran/Documents/AFINN-111.txt", header=FALSE)
+colnames(affin) <- c("word","score")
+
+summary(affin)
+str(affin)
+dim(affin)
+```
+
+<!-- 2. Compute the overall score for the MLK speech using the AFINN word list (as opposed to the positive and negative word lists). -->
+
+```{r}
+
+      # import mlk speech list into dataset
+      filename <- "/Users/sathishrajendiran/Documents/mlk_speech.pdf"
+      
+      # Read the PDF file
+      mlk_speech <- readPDF(control = list(text = "-layout"))(elem = list(uri = filename), language = "en", id = "id1")
+      mlk_speech <- mlk_speech[which(mlk_speech!="")]
+      # str(mlk_speech)
+      
+      # tail(mlk_speech,20 )
+      
+      words.vec <- VectorSource(mlk_speech)
+      words.corpus <- Corpus(words.vec)
+      # str(words.vec)
+      # str(words.corpus)
+      
+      # tm transformation | to lowercase, remove puntuation, numbers and stop words
+      words.corpus <- tm_map(words.corpus,content_transformer(tolower))
+      words.corpus <- tm_map(words.corpus,removePunctuation)
+      words.corpus <- tm_map(words.corpus,removeNumbers)
+      words.corpus <- tm_map(words.corpus,removeWords,stopwords("english"))
+      
+      # create term document matrix of the words corpus
+      tdm <- TermDocumentMatrix(words.corpus)
+      str(tdm)
+
+      inspect(tdm[1:50,1:2])
+      # create matrix
+      m <- as.matrix(tdm)
+      # str(m)
+      
+      # compute word counts
+      wordCounts <- rowSums(m)
+      wordCounts <- sort(wordCounts,decreasing = TRUE)
+      
+      
+      head(wordCounts)
+   
+      # create word cloud
+      wordcloud(names(wordCounts),wordCounts,rot.per = .08,colors = brewer.pal(8,"Paired"))
+      
+      
+      #Compute metrics
+      totalwords <- sum(wordCounts)
+      words <- names(wordCounts)
+      
+      #find matching AFFIN words from MLK Speech and return 0 for non matching words
+      speech_affin <- match(words,affin$word,nomatch = 0)
+      
+      # speech_affin
+      matchCounts <- wordCounts[which(speech_affin != 0)]
+      # matchCounts
+      
+      # create a data frame for mlk speech
+      speech_df <- data.frame(names(matchCounts),matchCounts,row.names = c(1:length(matchCounts)))
+      colnames(speech_df) <- c("word","counts")
+      
+      # speech_df[1:10,]
+      # affin[1:10,]
+      
+      # merge speech and affin dataframe to include the score
+      
+      affin_speech <- merge(speech_df,affin, by="word")
+      affin_speech[1:10,]
+      
+      # calculate overall score
+      final.score <- sum(affin_speech$counts * affin_speech$score)/totalwords
+      # final.score
+      
+      cat("\n Overall score for the MLK speech using the AFINN word list is: ",round(final.score*100,2),"%",sep = "")
+```
+
+
+<!-- 3. Then, just as in class, compute the sentiment score for each quarter (25%) of the speech to see how this sentiment analysis is the same or different than what was computing with just the positive and negative word files. -->
+<!-- Note that since you will be doing almost the exact same thing 4 times (once for each quarter of the speech), you should create a function to do most of the work, and call it 4 times. -->
+
+```{r}
+    
+    # import mlk speech list into dataset
+    filename <- "/Users/sathishrajendiran/Documents/mlk_speech.pdf"
+    
+    # Read the PDF file into a dataframe
+    mlk_speech <- readPDF(control = list(text = "-layout"))(elem = list(uri = filename), language = "en", id = "id1")
+    mlk_speech <- mlk_speech[which(mlk_speech!="")]
+    df1 <- data.frame(strwrap(mlk_speech[[1]]),stringsAsFactors=FALSE)
+    # View(df1)
+    
+    corpusFunction <- function(i){
+
+        #split the data into 4 quarters 
+        nrows <- nrow(df1)
+        cutPoint_Start <- floor(nrows * (i-1)/4) +1
+        cutPoint_End <- floor(nrows * i/4)
+        # df1[cutPoint_Start:cutPoint_End,]
+    
+        #Create words corpus
+        dfCorpus = Corpus(VectorSource(df1[cutPoint_Start:cutPoint_End,])) 
+        # inspect(dfCorpus)
+        
+        # tm transformation | to lowercase, remove puntuation, numbers and stop words
+        dfCorpus <- tm_map(dfCorpus,content_transformer(tolower))
+        dfCorpus <- tm_map(dfCorpus,removePunctuation)
+        dfCorpus <- tm_map(dfCorpus,removeNumbers)
+        dfCorpus <- tm_map(dfCorpus,stripWhitespace)
+        dfCorpus <- tm_map(dfCorpus,removeWords,stopwords("english"))
+        
+        # create term document matrix of the words corpus
+        dftdm <- TermDocumentMatrix(dfCorpus)
+        # inspect(dftdm[1:50,1:2])
+    
+        # create matrix
+        dfm <- as.matrix(dftdm)
+    
+        # compute word counts
+        dfwordCounts <- rowSums(dfm)
+        dfwordCounts <- sort(dfwordCounts,decreasing = TRUE)
+        
+        # head(dfwordCounts)
+        
+        # create word cloud
+        dfwordcloud <- wordcloud(names(dfwordCounts),dfwordCounts,rot.per = .08,colors = brewer.pal(8,"Paired"))
+        cat("\n cutPoint_start:",cutPoint_Start,"\n cutPoint_end:",cutPoint_End,"\n")
+        
+        dfwordcloud
+        
+        #Compute metrics
+        dftotalwords <- sum(dfwordCounts)
+        dfwords <- names(dfwordCounts)
+        
+        #find matching AFFIN words from MLK Speech and return 0 for non matching words
+        speech_affin <- match(dfwords,affin$word,nomatch = 0)
+        
+        # speech_affin
+        dfmatchCounts <- dfwordCounts[which(speech_affin != 0)]
+        # matchCounts
+        
+        # create a data frame for mlk speech
+        speech_df <- data.frame(names(dfmatchCounts),dfmatchCounts,row.names = c(1:length(dfmatchCounts)))
+        colnames(speech_df) <- c("word","counts")
+        
+        # speech_df[1:10,]
+        # affin[1:10,]
+        
+        # merge speech and affin dataframe to include the score
+        
+        affin_speech <- merge(speech_df,affin, by="word")
+        # affin_speech[1:10,]
+        
+        # calculate overall score
+        final.score <- round((sum(affin_speech$counts * affin_speech$score)/totalwords)*100,2)
+        # final.score
+        
+        cat("\n Overall score for the MLK speech using the AFINN word list is: ",final.score,"%",sep = "")
+        
+        return(final.score)
+    }
+    
+    # Process first quarter
+    q1 <- corpusFunction(1)
+    
+    # Process first quarter
+    q2 <- corpusFunction(2)
+    
+    # Process first quarter
+    q3 <- corpusFunction(3)
+    
+    # Process first quarter
+    q4 <- corpusFunction(4)
+    
+```
+
+
+<!-- 4. Finally, plot the results (i.e, 4 numbers) via a bar chart. -->
+
+```{r}
+  #create a dataframe combining all 4 scores from Q1, Q2, Q3 and Q4
+
+  df_scores <- data.frame(quarter=c("Q1","Q2","Q3","Q4"),score=c(q1,q2,q3,q4))
+
+  theme <-theme(plot.title = element_text(hjust = 0.5),axis.title = element_text())
+  dfplot <- ggplot(df_scores,aes(x=score, y=quarter, fill=quarter)) + geom_bar(stat="identity")+theme_minimal()
+  dfplot <- dfplot + coord_flip()+ ggtitle("MLK Speech by AFINN Score in Percentage")+ theme 
+  
+  dfplot
+  
+```
+

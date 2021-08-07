@@ -1,0 +1,444 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+
+-----------------------------------------------------------------------------------
+Title: "IST687 – Support Vector Machines HW"
+Name: Sathish Kumar Rajendiran
+Week: 9
+Date: 06/08/2020
+-----------------------------------------------------------------------------------
+Exercise: 
+        Support Vector Machines HW
+
+# Install necessary packages
+
+```{r}
+    install.packages( pkgs=c("kernlab","e1071","gdata","RCurl","ggplot2","ggcorrplot","reshape2","ggeasy","viridis","viridisLite","gridExtra"),repos = "http://cran.us.r-project.org")
+    
+    library(kernlab)
+    library(e1071)
+    library(gdata)
+    library(RCurl)
+    library(ggplot2)
+    library(ggcorrplot)
+    library(reshape2)
+    library(ggeasy)
+    library(viridis)
+    library(viridisLite)
+    library(gridExtra)
+
+```
+
+```{r}
+  # function printDataInfo
+    printDataInfo <- function(myData)
+      {
+        strinfo <- str(myData)
+        cat("str:",strinfo,"\n")
+        
+        colnamesinfo <- colnames(myData)
+        cat("colnames:",colnamesinfo,"\n")
+        
+        diminfo <- dim(myData)
+        cat("dim:",diminfo,"\n")
+        
+        nrowinfo <- nrow(myData)
+        cat("nrow:",nrowinfo,"\n")
+        
+        nrowsinfo <- myData[1:3,]
+        return(nrowsinfo)
+       }
+```
+
+<!-- Step 1: Load the data -->
+<!-- Let go back and analyze the air quality dataset (if you remember, we used that previously, in the visualization lab). 
+Remember to think about how to deal with the NAs in the data. -->
+
+```{r}
+
+    # import airquality dataset
+    ?airquality
+
+    myairquality <- data.frame(airquality,stringsAsFactors=FALSE)
+    
+    # import airquality dataset
+    printDataInfo(myairquality)
+    
+    #look for columns having NAs
+    clnames <- colnames(myairquality)[colSums(is.na(myairquality)) > 0]
+    clnames
+    
+     #  create subset of dataframe rows having NAs
+    na_data <- myairquality[rowSums(is.na(myairquality)) > 0,]
+    na_data # 680- rows
+    
+     # find and replace NAs on Ozone Column
+    myairquality$Ozone[is.na(myairquality$Ozone)] <- round(as.numeric(mean(myairquality$Ozone, na.rm=TRUE)),0)
+  
+     # find and replace NAs on Solar.R Column
+    myairquality$Solar.R[is.na(myairquality$Solar.R)] <- round(as.numeric(mean(myairquality$Solar.R, na.rm=TRUE)),0)
+    
+     #  Verify if the dataframe has NAs
+    na_data <- myairquality[rowSums(is.na(myairquality)) > 0,]
+    na_data # 680- rows
+
+    myairquality[1:10,]
+    
+    
+    # Plot histogram on countries data to analyze the data spread for missing data elements
+    hcolor <- c("orange")
+    hfill <- c("steelblue")
+    htitle <- c("Histogram - Data availability")
+    theme <-theme(plot.title = element_text(hjust = 0.5),axis.title = element_text())
+    
+    gghistAll <- ggplot(data=melt(myairquality),mapping = aes(x= value)) 
+    gghistAll <- gghistAll+geom_histogram(bins = 20,color=hcolor,fill=hfill,na.rm = TRUE) + facet_wrap(~variable,scales = "free_x") 
+    gghistAll +  
+      labs(x = NULL, y = NULL,title = "New York Air Quality Measurements", caption = "Data: Daily air quality measurements in New York, May to September 1973")+theme
+    
+    
+
+```
+
+<!-- Step 2: Create train and test data sets -->
+<!-- Using techniques discussed in class, create two datasets – one for training and one for testing. -->
+
+```{r}
+
+  # find total number of rows
+
+  airQ <- myairquality
+  nrows <- nrow(airQ)
+  nrows
+  
+  # Prepare train and test datasets based on the total number of rows | 2/3 --> Train dataset and 1/3 --> Test dataset
+  
+  #find the cut point by taking 2/3rd of the total number of rows
+  cutPoint <- floor(2*nrows/3)
+  cutPoint
+  
+  #prepare random sample - as we're not sure about the data arrangement
+  
+  rand <- sample(1:nrows)
+  head(rand)
+  
+  airQ.train <- airQ[rand[1:cutPoint],]
+  airQ.test  <- airQ[rand[(cutPoint+1):nrows],]
+  
+  str(airQ.train)  # 102 observations
+  str(airQ.test) # 51 observations
+  
+  airQ.train[1:10,]
+  airQ.test[1:10,]
+  
+```
+
+```{r}
+
+# Plot histogram on countries data to analyze the data spread for missing data elements
+     
+    gghist <- ggplot(data=melt(airQ),mapping = aes(x= value)) 
+    gghist <- gghist+geom_histogram(bins = 20,color=hcolor,fill=hfill,na.rm = TRUE) + facet_wrap(~variable,scales = "free_x")
+    gghist +  
+      labs(x = NULL, y = NULL, title="New York Air Quality Measurements", caption = "Data: Daily air quality measurements in New York, May to September 1973")+theme
+
+```
+
+
+<!-- Step 3: Build a Model using KSVM & visualize the results -->
+
+```{r}
+
+# 1) Build a model (using the ‘ksvm’ function, trying to predict onzone). 
+# You can use all the possible attributes, or select the attributes that you think would be the most helpful.
+
+    #predict Ozone values from all the variables in the train dataset
+
+    model <- ksvm(Ozone~.,data=airQ.train,kernel="rbfdot",kpar="automatic",C=10,cross=10,prob.model=TRUE)
+    model
+    
+# 2) Test the model on the testing dataset, and compute the Root Mean Squared Error
+    
+    pred <- predict(model,airQ.test,type="votes")
+    str(pred)
+    
+    # create a dataframe to have actual and preicted Ozone values
+    model.df <- data.frame(airQ.test$Ozone,pred[,1],stringsAsFactors=FALSE)
+    colnames(model.df) <- c("Test.Ozone","Pred.Ozone")
+    head(model.df)
+    
+    #compute the Root Mean Squared Error
+    
+    rmseKSVM <- sqrt(mean((model.df$Test.Ozone-model.df$Pred.Ozone)^2))
+    cat("Root Mean Squared Error from KSVM model is :",rmseKSVM)
+    
+#  3) Plot the results. Use a scatter plot. Have the x-axis represent temperature, the y-axis represent wind, 
+    # the point size and color represent the error, as defined by the actual ozone level minus the predicted ozone level).   
+    
+    abs.Error <- round(abs(model.df$Test.Ozone-model.df$Pred.Ozone),0)
+    abs.Error
+    
+    #create a dataframe
+    plot.df <- data.frame(airQ.test$Temp,airQ.test$Wind,abs.Error)
+    colnames(plot.df) <- c("Temp","Wind","Abs.Error")
+    
+    ggscatterKSVM <- ggplot(plot.df,aes(x= Temp,y=Wind))
+    ggscatterKSVM <- ggscatterKSVM + geom_point(aes(size=Abs.Error,color=Abs.Error)) + geom_smooth(method="auto", se=TRUE, fullrange=FALSE, level=1)
+              
+    ggscatterKSVM + labs(title="Ozone Value Predictions", caption = "Data: Based on KSVM Model")+theme
+    ggscatterKSVM
+    ksvm_plot <- ggscatterKSVM+theme(legend.position="none") + ggtitle("ksvm model") +theme
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------*
+    
+# 4) Compute models and plot the results for ‘svm’ (in the e1071 package) and ‘lm’.
+# Generate similar charts for each model
+    
+    #predict Ozone values from all the variables in the train dataset using SVM from e1071 package
+
+    modelSVM <- svm(Ozone~.,data=airQ.train,prob.model=TRUE)
+    modelSVM
+    
+    predSVM <- predict(modelSVM,airQ.test,type="votes")
+    str(predSVM)
+    
+    # create a dataframe to have actual and preicted Ozone values
+    modelSVM.df <- data.frame(airQ.test$Ozone,predSVM,stringsAsFactors=FALSE)
+    colnames(modelSVM.df) <- c("Test.Ozone","Pred.Ozone")
+    head(modelSVM.df)
+    
+    #compute the Root Mean Squared Error
+    
+    rmseSVM <- sqrt(mean((modelSVM.df$Test.Ozone-modelSVM.df$Pred.Ozone)^2))
+    cat("Root Mean Squared Error from SVM model is :",rmseSVM)
+    
+    abs.ErrorSVM <- round(abs(modelSVM.df$Test.Ozone-modelSVM.df$Pred.Ozone),0)
+    abs.ErrorSVM
+    
+    #create a dataframe
+    plot.dfSVM <- data.frame(airQ.test$Temp,airQ.test$Wind,abs.ErrorSVM)
+    colnames(plot.dfSVM) <- c("Temp","Wind","Abs.Error")
+    
+    ggscatterSVM <- ggplot(plot.dfSVM,aes(x= Temp,y=Wind))
+    ggscatterSVM <- ggscatterSVM + geom_point(aes(size=abs.ErrorSVM,color=abs.ErrorSVM)) + geom_smooth(method="auto", se=TRUE, fullrange=FALSE, level=1)
+              
+    ggscatterSVM + labs(backgroundColor="white",title="Ozone Value Predictions", caption = "Data: Based on SVM Model")+theme 
+    
+    svm_plot <- ggscatterSVM + theme(legend.position="none") + ggtitle("svm model") +theme
+    
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------*
+    
+    #predict Ozone values from all the variables in the train dataset using LM 
+
+    modelLM <- lm(formula = Ozone~., data=airQ.train)
+    modelLM
+    
+    predLM <- predict(modelLM,airQ.test)
+    str(predLM)
+    
+    # create a dataframe to have actual and preicted Ozone values
+    modelLM.df <- data.frame(airQ.test$Ozone,predLM,stringsAsFactors=FALSE)
+    colnames(modelLM.df) <- c("Test.Ozone","Pred.Ozone")
+    head(modelLM.df)
+    
+    #compute the Root Mean Squared Error
+    
+    rmseLM <- sqrt(mean((modelLM.df$Test.Ozone-modelLM.df$Pred.Ozone)^2))
+    cat("Root Mean Squared Error from LM model is :",rmseLM)
+    
+    abs.ErrorLM <- round(abs(modelLM.df$Test.Ozone-modelLM.df$Pred.Ozone),0)
+    abs.ErrorLM
+    
+    #create a dataframe
+    plot.dfLM <- data.frame(airQ.test$Temp,airQ.test$Wind,abs.ErrorLM)
+    colnames(plot.dfLM) <- c("Temp","Wind","abs.Error")
+    
+    ggscatterLM <- ggplot(plot.dfLM,aes(x= Temp,y=Wind))
+    ggscatterLM <- ggscatterLM + geom_point(aes(size=abs.ErrorLM,color=abs.ErrorLM)) + geom_smooth(method="auto", se=TRUE, fullrange=FALSE, level=1)
+              
+    ggscatterLM + labs(backgroundColor="white",title="Ozone Value Predictions", caption = "Data: Based on LM Model")+theme 
+    lm_plot <- ggscatterLM + ggtitle("lm model") +theme
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------*
+   
+     # Consolidate all charts together
+    
+    grid.arrange(ksvm_plot,svm_plot,lm_plot,widths = c(2,2,1), layout_matrix = rbind(c(1,2,2),c(1,3,3)))
+   
+    
+```
+
+<!-- Step 4: Create a ‘goodOzone’ variable -->
+
+```{r}
+# This variable should be either 0 or 1. It should be 0 if the ozone is below the average for all the data observations, and 1 if it is equal to or above the average ozone observed.
+
+    #compute the mean for Ozone
+    
+    ozone.mean <- round(as.numeric(mean(airQ$Ozone, na.rm=TRUE)),0)
+    cat("mean value of Ozone variable is :",ozone.mean)
+
+    airQ.train$goodOzone <- ifelse(airQ.train$Ozone < ozone.mean,0,1)  #create goodOzone variable on the training dataset
+    airQ.test$goodOzone  <- ifelse(airQ.test$Ozone < ozone.mean,0,1) #create goodOzone variable on the test dataset
+    
+    airQ.train <- airQ.train[,-1]  # remove ozone variable from training dataset
+    airQ.test <- airQ.test[,-1] # remove ozone variable from testing dataset
+    
+    # review colnames
+    colnames(airQ.train)
+    colnames(airQ.test)
+    
+    # airQ.train
+    # airQ.test
+    
+    # convert to factor 
+    airQ.train$goodOzone <- as.factor(airQ.train$goodOzone)
+    airQ.test$goodOzone <- as.factor(airQ.test$goodOzone)
+    
+    # airQ.train
+    # airQ.test
+```
+
+
+<!-- Step 5: See if we can do a better job predicting ‘good’ and ‘bad’ days -->
+
+```{r}
+# 1) Build a model (using the ‘ksvm’ function, trying to predict ‘goodOzone’). 
+#   You can use all the possible attributes, or select the attributes that you think would be the most helpful.
+
+    #predict Ozone values from all the variables in the train dataset
+
+    goodKSVM <- ksvm(goodOzone~.,data=airQ.train,kernel="rbfdot",kpar="automatic",C=10,cross=10,prob.model=TRUE)
+    goodKSVM
+    
+# 2) Test the model on the testing dataset, and compute the percent of ‘goodOzone’ that was correctly predicted.
+    
+    goodKSVMpred <- predict(goodKSVM,airQ.test)
+    str(goodKSVMpred)
+    
+    summary(goodKSVMpred)
+    
+    # create a dataframe to have actual and preicted Ozone values
+    goodmodel.df <- data.frame(airQ.test$goodOzone,goodKSVMpred)
+    colnames(goodmodel.df) <- c("Test.goodOzone","Pred.goodOzone")
+    head(goodmodel.df)
+    
+    # Percentage of good predictions 
+    
+    goodKSVM.Perc <- length(which(goodmodel.df$Test.goodOzone==goodmodel.df$Pred.goodOzone))/dim(goodmodel.df)[1]
+    cat("Percentage of good predictions from KSVM model is :",goodKSVM.Perc*100)
+    
+# 3) Plot the results. Use a scatter plot. Have the x-axis represent temperature, the y-axis represent wind, the shape representing what was predicted (good or bad day), the color representing the actual value of ‘goodOzone’ (i.e. if the actual ozone level was good) and the size represent if the prediction was correct (larger symbols should be the observations the model got wrong).
+    
+    goodmodel.df$Accuracy <- ifelse(goodmodel.df$Test.goodOzone==goodmodel.df$Pred.goodOzone,"good","bad") 
+    goodmodel.df
+    
+    #create a dataframe
+    goodplot.df <- data.frame(airQ.test$Temp,airQ.test$Wind,airQ.test$goodOzone,goodmodel.df$Pred.goodOzone,goodmodel.df$Accuracy)
+    colnames(goodplot.df) <- c("Temp","Wind","goodOzone","PredictOzone","Accuracy")
+    
+    goodKSVMplot <- ggplot(goodplot.df,aes(x= Temp,y=Wind))
+    goodKSVMplot <- goodKSVMplot + geom_point(aes(size=Accuracy,color=goodOzone,shape=PredictOzone)) + geom_smooth(method="auto", se=TRUE, fullrange=FALSE, level=1)
+              
+    goodKSVMplot + labs(title="Ozone Value Predictions", caption = "Data: Based on Good KSVM Model")+theme
+    goodKSVMplot
+    goodksvm_plot <- goodKSVMplot+theme(legend.position="none") + ggtitle("good ksvm model") +theme
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------*
+    
+# 4) Compute models and plot the results for ‘svm’ (in the e1071 package) and ‘nb’ (Naive Bayes, also in the e1071 package).
+    
+    #predict Ozone values from all the variables in the train dataset using SVM from e1071 package
+
+    goodmodelSVM <- svm(goodOzone~.,data=airQ.train)
+    goodmodelSVM
+    
+    goodpredSVM <- predict(goodmodelSVM,airQ.test)
+    str(goodpredSVM)
+    
+   # create a dataframe to have actual and preicted Ozone values
+    goodmodelSVM.df <- data.frame(airQ.test$goodOzone,goodpredSVM)
+    colnames(goodmodelSVM.df) <- c("Test.goodOzone","Pred.goodOzone")
+    head(goodmodelSVM.df)
+    
+    # Percentage of good predictions 
+    
+    goodSVM.Perc <- length(which(goodmodelSVM.df$Test.goodOzone==goodmodelSVM.df$Pred.goodOzone))/dim(goodmodelSVM.df)[1]
+    cat("Percentage of good predictions from SVM model is :",goodSVM.Perc*100)
+    
+    goodmodelSVM.df$Accuracy <- ifelse(goodmodelSVM.df$Test.goodOzone==goodmodelSVM.df$Pred.goodOzone,"good","bad") 
+    goodmodelSVM.df
+    
+    #create a dataframe
+    goodplotSVM.df <- data.frame(airQ.test$Temp,airQ.test$Wind,airQ.test$goodOzone,goodmodelSVM.df$Pred.goodOzone,goodmodelSVM.df$Accuracy)
+    colnames(goodplotSVM.df) <- c("Temp","Wind","goodOzone","PredictOzone","Accuracy")
+    
+    goodSVMplot <- ggplot(goodplotSVM.df,aes(x= Temp,y=Wind))
+    goodSVMplot <- goodSVMplot + geom_point(aes(size=Accuracy,color=goodOzone,shape=PredictOzone)) + geom_smooth(method="auto", se=TRUE, fullrange=FALSE, level=1)
+              
+    goodSVMplot + labs(title="Ozone Value Predictions", caption = "Data: Based on Good SVM Model")+theme
+    goodSVMplot
+    goodsvm_plot <- goodSVMplot+theme(legend.position="none") + ggtitle("good svm model") +theme
+    
+    #-------------------------------------------------------------------------------------------------------------------------------------------------------*
+    
+    #predict Ozone values from all the variables in the train dataset using naiveBayes (nb) 
+
+    modelNB <- naiveBayes(goodOzone~., data=airQ.train)
+    modelNB
+    
+    predNB <- predict(modelNB,airQ.test)
+    str(predNB)
+    summary(predNB)
+    head(predNB)
+    
+    # create a dataframe to have actual and preicted Ozone values
+    modelNB.df <- data.frame(airQ.test$goodOzone,predNB)
+    colnames(modelNB.df) <- c("Test.goodOzone","Pred.goodOzone")
+    head(modelNB.df)
+    
+    # Percentage of good predictions 
+    
+    goodNB.Perc <- length(which(modelNB.df$Test.goodOzone==modelNB.df$Pred.goodOzone))/dim(modelNB.df)[1]
+    cat("Percentage of good predictions from NB model is :",goodNB.Perc*100)
+    
+    modelNB.df$Accuracy <- ifelse(modelNB.df$Test.goodOzone==modelNB.df$Pred.goodOzone,"good","bad") 
+    modelNB.df
+    
+    #create a dataframe
+    goodplotNB.df <- data.frame(airQ.test$Temp,airQ.test$Wind,airQ.test$goodOzone,modelNB.df$Pred.goodOzone,modelNB.df$Accuracy)
+    colnames(goodplotNB.df) <- c("Temp","Wind","goodOzone","PredictOzone","Accuracy")
+    
+    goodNBplot <- ggplot(goodplotNB.df,aes(x= Temp,y=Wind))
+    goodNBplot <- goodNBplot + geom_point(aes(size=Accuracy,color=goodOzone,shape=PredictOzone)) + geom_smooth(method="auto", se=TRUE, fullrange=FALSE, level=1)
+              
+    goodNBplot + labs(title="Ozone Value Predictions", caption = "Data: Based on Good nb Model")+theme
+    goodNBplot
+    goodNBplot <- goodNBplot+ ggtitle("good nb model") +theme#-------------------------------------------------------------------------------------------------------------------------------------------------------*
+   
+     # Consolidate all charts together
+    
+    grid.arrange(goodksvm_plot,goodsvm_plot,goodNBplot,widths = c(2,2,1), layout_matrix = rbind(c(1,2,2),c(1,3,3)))
+```
+
+
+<!-- Step 6: Which are the best Models for this data? -->
+<!-- Review what you have done and state which is the best and why. -->
+
+```{r}
+
+    cat("Root Mean Squared Error from KSVM model is :",rmseKSVM)
+    cat("\n Root Mean Squared Error from SVM model is :",rmseSVM)
+    cat("\n Root Mean Squared Error from LM model is :",rmseLM)
+    
+    cat("\n Percentage of good predictions from KSVM model is :",goodKSVM.Perc*100)
+    cat("\n Percentage of good predictions from SVM model is :",goodSVM.Perc*100)
+    cat("\n Percentage of good predictions from NB model is :",goodNB.Perc*100)
+    
+    cat("\n based on RMSE variable - LM model has highest and SVM has the lowest score. So in this case LM is relatively better model than ksvm ")
+    cat("\n based on Good Ozone variable - KSVM model has 78% accuracy and the naive bayes model has the least at 74% ")
+    
+```
+

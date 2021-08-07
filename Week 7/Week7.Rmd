@@ -1,0 +1,192 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+#Mashup
+
+Install Packages
+
+```{r}
+install.packages(pkgs=c("ggplot2","maps","mapproj","ggmap","tidyverse"),repos = "http://cran.us.r-project.org")
+
+library(ggplot2)
+library(maps)
+library(mapproj)
+library(ggmap)
+library(tidyverse)
+# library(ggeasy)
+# library(reshape2)
+# library(data.table)
+# library(stats)
+# library(dplyr)
+# library(RSQLite)
+# library(sqldf)
+
+```
+
+# funtion to retrive dataframe metadata
+
+load State dataset.
+
+```{r}
+
+us <- map_data("state")
+
+# function printDataInfo
+  printDataInfo <- function(myData)
+    {
+      strinfo <- str(myData)
+      cat("str:",strinfo,"\n")
+      
+      colnamesinfo <- colnames(myData)
+      cat("colnames:",colnamesinfo,"\n")
+      
+      diminfo <- dim(myData)
+      cat("dim:",diminfo,"\n")
+      
+      nrowinfo <- nrow(myData)
+      cat("nrow:",nrowinfo,"\n")
+      
+      nrowsinfo <- myData[1:3,]
+      return(nrowsinfo)
+     }
+  
+# printDataInfo
+  printDataInfo(us)
+```
+
+# Create a dummy dataframe to contain state names.
+
+
+```{r}
+dummyDF <- data.frame(state.name,stringsAsFactors = FALSE)
+dummyDF$state.name <- tolower(dummyDF$state.name)
+printDataInfo(dummyDF)
+
+```
+
+# Build map
+
+```{r}
+map.simple <- ggplot(dummDF,aes(map_id=state.name))
+map.simple <- map.simple + geom_map(map=us,fill="white",color="black")
+map.simple <- map.simple + expand_limits(x=us$long,y=us$lat)
+map.simple <- map.simple+coord_map()+ggtitle("Basic map of Continental USA")
+
+map.simple +geom_point(aes( x=-100,y=30),color="red")
+```
+Build layering/mashup data
+
+```{r}
+
+readcensus <- function() {
+  
+    urlToread <- "http://www2.census.gov/programs-surveys/popest/tables/2010-2011/state/totals/nst-est2011-01.csv"
+    testFrame <- read.csv(url(urlToread),skip = 3)
+  
+    printDataInfo(testFrame)
+    testFrame <- testFrame[-1:-8,]
+    testFrame <- testFrame[,1:5]
+    colnames(testFrame)<- c('stateName', 'base2010', 'base2011','Jul2010', 'Jul2011')
+    
+    testFrame <- testFrame[6:56,]
+    
+    testFrame$base2010 <- as.integer(gsub(',','',testFrame$base2010))
+    testFrame$base2011 <- as.integer(gsub(',','',testFrame$base2011))
+    testFrame$Jul2010 <- as.integer(gsub(',','',testFrame$Jul2010))
+    testFrame$Jul2011 <- as.integer(gsub(',','',testFrame$Jul2011))
+    
+     # remove the special character "." infront of stateName
+    testFrame$stateName <- gsub('[.]','',testFrame$stateName)
+    
+    row.names(testFrame) <- NULL
+    return(testFrame)
+  }
+
+  dfStates <- readcensus()
+
+  
+  dfStates$state <- tolower(dfStates$stateName)
+  printDataInfo(dfStates)
+  
+```
+```{r}
+
+head(dfStates)
+map.popColor <- ggplot(dfStates,aes(map_id=state))
+map.popColor <- map.popColor + geom_map(map=us,aes(fill=Jul2011))
+map.popColor <- map.popColor + expand_limits(x=us$long,y=us$lat)
+map.popColor <- map.popColor + coord_map() + ggtitle("state poplulation")
+
+map.popColor
+
+```
+
+```{r}
+library(ggmap)
+# ?register_google
+
+# register_google("AIzaSyBzhc5YE-s8B5tQYc3VQIzCiPv-VwBaOSo")
+
+latlon <- geocode("syracuse,ny")
+map.popColor + geom_point(aes(x=latlon$lon,y=latlon$lat),color="yellow",size=5,na.rm = TRUE)
+
+
+df.latlon <- data.frame(latlon)
+latlon <- geocode("atlanta,ga")
+df.latlon[2,] <- latlon
+df.latlon[3,] <- geocode("denver,colorado")
+df.latlon[4,] <- geocode("miami,florida")
+df.latlon
+df.latlon$state <- "?"
+map.popColor + geom_point(data=df.latlon, aes(x=lon,y=lat),alpha =.5, color="yellow",size=5,na.rm = TRUE)
+
+```
+
+
+```{r}
+
+cities <- c("Manhatten,NY","Boston,MA","Philadelphia,PA","Tampa,FL", "Chicago,IL","Boise,ID","San Francisco, CA","Seattle,WA","Houston,TX")
+
+bus <- c(10,7,6,5,7,3,10,7,5)
+weather <- c(5,3,6,7,3,6,10,7,2)
+living <- c(7,6,6,7,5,4,6,8,2)
+city.df <- data.frame(bus,cities,weather,living)
+
+city.df$state <- "?"
+
+city.df$geoCode <-geocode(cities)
+
+city.df
+
+map.simple + geom_point(aes( x=-100,y=30),color="red")
+
+map.simple + geom_point(data=city.df, aes(x=lon,y=lat),color="yellow",na.rm = TRUE)
+
+map.popColor <- ggplot(city.df,aes(map_id=state))
+map.popColor <- map.popColor + geom_map(map=us,aes(fill=Jul2011))
+map.popColor <- map.popColor + expand_limits(x=us$long,y=us$lat)
+map.popColor <- map.popColor + coord_map() + ggtitle("state poplulation")
+
+```
+
+```{r}
+
+city.df
+
+city.df$lat <- tibble(city.df$geoCode)$lat
+city.df$lon <- tibble(city.df$geoCode)$lon
+
+map.simple + geom_point(aes( x=-100,y=30),color="red")
+
+geom_point(data=city.df,aes(x=city.df$lon,y=city.df$lat), color=weather,size=living,na.rm = TRUE)
+
+
+map.simple + geom_point(aes(x=latlon$lon,y=latlon$lat),color="yellow",size=5,na.rm = TRUE)  # simple map
+
+map.popColor +  geom_point(data=city.df, aes(x=lon,y=lat),alpha =.5, color=weather,size=bus,size=5,na.rm = TRUE)
+
+
+```
+

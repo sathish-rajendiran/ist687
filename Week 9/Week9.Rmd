@@ -1,0 +1,181 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+?Groceries
+
+install.packages("arules")
+library(arules)
+data(Groceries)
+
+summary(Groceries)
+str(Groceries)
+
+g <- Groceries
+
+inspect(g[1:15])
+length(g)
+str(g)
+
+data <- g@data
+
+str(data)
+means <- rowMeans(data)
+str(means)
+
+str(g@itemInfo)
+labels <- g@itemInfo[,1]
+labels[1:10]
+
+
+levels <- g@itemInfo$level2
+
+levels[1:10]
+
+df <- data.frame(means,labels,levels)
+df[1:10,]
+
+df1 <- df[order(-df$means),]
+df1[1:10,]
+
+df[df$means>0.08,]
+
+
+```
+
+```{r}
+
+
+```
+
+```{r}
+
+itemFrequencyPlot(Groceries,support=0.1)
+itemFrequencyPlot(Groceries,support=0.05, cex.names=0.5)
+
+rules <- apriori(Groceries,parameter = list(support=0.005,confidence=0.5))
+
+rules <- apriori(Groceries,parameter = list(support=0.01,confidence=0.5))
+
+inspect(rules)
+
+
+
+```
+```{r}
+install.packages("arulesViz")
+library(arulesViz)
+
+inspect(ruleset)
+
+ruleset <- apriori(Groceries,parameter = list(support=0.005,confidence=0.35))
+
+plot(ruleset)
+
+goodrules <- ruleset[quality(ruleset)$lift >3.5]
+
+inspect(goodrules)
+
+plot(goodrules)
+
+```
+
+```{r}
+
+beerrules <- apriori(Groceries,parameter = list(support=0.001,confidence=0.25))
+inspect(beerrules)
+plot(beerrules)
+
+
+beerrulesBest <- apriori(Groceries,parameter = list(support=0.001,confidence=0.8))
+inspect(beerrulesBest)
+plot(beerrulesBest)
+
+plot(beerrulesBest, method = "graph", control=list(type="items"))
+
+
+```
+
+```{r}
+ install.packages("kernlab")
+ library(kernlab)
+
+  # -------------------
+
+  bank_fpath <- "/Users/sathishrajendiran/Documents/bank.csv"
+  # function readFiles
+  readFiles <- function(fpath)
+    {
+    dftemp <- data.frame(read.csv(fpath),stringsAsFactors=FALSE)
+    return(dftemp)
+    }
+  
+  # -------------------
+  
+  bank_data <- readFiles(bank_fpath) 
+  str(bank_data)
+  summary(bank_data)
+  
+  bd <- bank_data
+  
+  nrows<- nrow(bd)
+  nrows
+  
+  # -------------------
+  
+  cutPoint <- floor(2*nrows/3)
+  cutPoint
+  
+  rand <- sample(1:nrows)
+  head(rand)
+  
+  bd.train <- bd[rand[1:cutPoint],]
+  bd.test  <- bd[rand[(cutPoint+1):nrows],]
+  
+  str(bd.train)
+  str(bd.test)
+  
+  # -------------------
+  
+  model <- ksvm(y~.,data=bd.train)
+  model
+  
+  pred <- predict(model,bd.test)
+  results <- table(pred,bd.test$y)
+  
+  (1286+37)/4051
+  
+  results
+  
+  totalCorrect <- results[1,1] + results[2,2]
+  totalCorrect
+  totalInTest <- nrow(bd.test)
+  
+  testAccuracy <- totalCorrect/totalInTest
+  testAccuracy *100
+  
+  #----------------
+  
+  model.1 <- ksvm(y~ education, data=bd.train)
+  model.1
+  
+  pred.1 <- predict(model.1,bd.test)
+  results.1 <- table(pred.1,bd.test$y)
+  
+  results.1
+  
+  totalCorrect.1 <- results.1[1,1] + results.1[2,2]
+  totalCorrect.1
+  totalInTest.1 <- nrow(bd.test)
+  
+  testAccuracy.1 <- totalCorrect.1/totalInTest.1
+  testAccuracy.1 *100
+  
+  
+  
+  
+```
+

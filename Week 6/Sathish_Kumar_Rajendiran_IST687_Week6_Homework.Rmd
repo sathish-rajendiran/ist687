@@ -1,0 +1,252 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+-----------------------------------------------------------------------------------
+Title: "IST687 – Air quality Analysis"
+Name: Sathish Kumar Rajendiran
+Week: 6
+Date: 05/12/2020
+-----------------------------------------------------------------------------------
+Exercise: 
+        Air quality Analysis
+
+# Install necessary packages
+
+```{r warning=FALSE}
+install.packages( pkgs=c("ggplot2","reshape2","ggeasy","viridis"),repos = "http://cran.us.r-project.org")
+
+install.packages("ggplot2", repos ="http://cran.us.r-project.org")
+
+# install.packages("ggplot2")
+# install.packages("reshape2")
+# install.packages("ggeasy")
+# install.packages("viridis")
+
+
+library(ggplot2)
+library(ggcorrplot)
+library(reshape2)
+library(ggeasy)
+library(viridis)
+```
+
+#   Step 1: Load the data
+
+<!-- We will use the airquality data set, which you should already have as part of your R installation. -->
+
+#   Step 2: Clean the data
+
+<!-- After you load the data, there will be some NAs in the data. You need to figure out what to do about those nasty NAs. -->
+
+```{r}
+#   Step 1: Load the data
+
+    ?airquality
+
+    myairquality <- data.frame(airquality)
+    str(myairquality)
+    
+    #look for columns having NAs
+    clnames <- colnames(myairquality)[colSums(is.na(myairquality)) > 0]
+    clnames
+    
+    #create subset of dataframe rows having NAs
+    na_myairquality <- myairquality[rowSums(is.na(myairquality)) > 0,]
+    # na_myairquality
+    
+    #review the columns with distinct values and look for NAs
+    sort(unique(myairquality$Ozone),decreasing = FALSE,na.last = FALSE)
+    sort(unique(myairquality$Solar.R),decreasing = FALSE,na.last = FALSE)
+    sort(unique(myairquality$Wind),decreasing = FALSE,na.last = FALSE)
+    sort(unique(myairquality$Temp),decreasing = FALSE,na.last = FALSE)
+    sort(unique(myairquality$Month),decreasing = FALSE,na.last = FALSE)
+    sort(unique(myairquality$Day),decreasing = FALSE,na.last = FALSE)
+    
+    #replace NAs with 0
+    myairquality[is.na(myairquality)] <- 0
+   
+```
+
+#   Step 3: Understand the data distribution
+<!-- Create the following visualizations using ggplot: -->
+<!-- • Histograms for each of the variables -->
+<!-- • Boxplot for Ozone -->
+<!-- • Boxplot for wind values (round the wind to get a good number of “buckets”) -->
+
+
+```{r}
+
+# Create Histograms for each of the variables 
+
+#histogram for all variable
+
+  hcolor <- c("orange")
+  hfill <- c("steelblue")
+  htitle <- c("Histogram - airquality values distribution")
+  theme <-theme(plot.title = element_text(hjust = 0.5),axis.title = element_text())
+  
+  gghist <- ggplot(data=melt(myairquality),mapping = aes(x= value)) 
+
+  gghist+geom_histogram(bins = 20,color=hcolor,fill=hfill)+facet_wrap(~variable,scales = "free_x")+ ggtitle(htitle) + theme
+    
+```
+
+
+```{r}
+myairquality[1,]
+
+myairquality$Date <- as.Date(paste("1973",myairquality$Month,myairquality$Day,sep = "-"))
+```
+
+#  Step 3: Explore how the data changes over time
+
+<!-- First, make sure to create appropriate dates (this data was from 1973). Then create line charts for ozone, temp, wind and solar.R (one line chart for each, and then one chart with 4 lines, each having a different color). Create these visualizations using ggplot. -->
+<!-- Note that for the chart with 4 lines, you need to think about how to effectively use the y- axis. -->
+
+```{r}
+
+# Create line charts for ozone, temp, wind and solar
+
+  glChart <- function(d,xcol,ycol,c,ctitle) 
+    {
+      x <- d[,which(colnames(d)==xcol)]
+      y <- d[,which(colnames(d)==ycol)]
+      t <- paste(ycol,ctitle)
+      ggchart <- ggplot(d,aes(x,y)) + geom_line(color=c)+ ggtitle(t) + xlab(xcol)+ ylab(ycol) + theme 
+      return(ggchart)
+    }
+  
+  glChart(myairquality,"Date","Ozone","brown","quality value changes over time - line chart")
+  
+```
+```{r}
+
+  glChart(myairquality,"Date","Wind","steelblue","quality value changes over time - line chart")
+
+```
+
+
+```{r}
+
+  glChart(myairquality,"Date","Solar.R","orange","quality value changes over time - line chart")
+ 
+```
+
+```{r}
+ 
+glChart(myairquality,"Date","Temp","violet","quality value changes over time - line chart")
+  
+ 
+```
+
+
+```{r}
+ # All values in one chart
+  
+  df <-data.frame(myairquality$Ozone,myairquality$Solar.R,myairquality$Wind,myairquality$Temp,myairquality$Date)
+  
+  df <- melt(df,id=c("myairquality.Date"))
+  gghist <- ggplot(df,aes(x= myairquality.Date,y=value,color=variable)) 
+  
+  gghist+geom_line()
+```
+
+
+```{r}
+
+# Create Boxplot for Ozone
+
+    myairquality[1,]
+    
+    # unique(myairquality$Ozone)
+    
+    ggOzoneboxplot <- ggplot(myairquality,aes(Ozone)) +geom_boxplot(fill = "steelblue", colour = "orange",outlier.colour = "red", outlier.shape = 1)+ggtitle("boxplot - Ozone value")
+    
+    ggOzoneboxplot+theme
+
+
+```
+
+
+```{r}
+
+# Create Boxplot for wind values (round the wind to get a good number of “buckets”)
+
+    myairquality[1,]
+    
+    # unique(myairquality$Wind)
+    
+    roundedWind <- round(myairquality$Wind)
+    
+    
+    ggWindboxplot <- ggplot(myairquality,aes(roundedWind)) +geom_boxplot(fill = "steelblue", colour = "orange",outlier.colour = "red", outlier.shape = 1)+ggtitle("boxplot - wind value")
+    
+    ggWindboxplot +theme
+```
+
+
+
+# Step 4: Look at all the data via a Heatmap
+
+<!-- Create a heatmap, with each day along the x-axis and ozone, temp, wind and solar.r along the y-axis, and days as rows along the y-axis. Great the heatmap using geom_tile (this defines the ggplot geometry to be ‘tiles’ as opposed to ‘lines’ and the other geometry we have previously used). -->
+<!-- Note that you need to figure out how to show the relative change equally across all the variables. -->
+
+
+```{r}
+
+  dfheat <-data.frame(myairquality$Ozone,myairquality$Solar.R,myairquality$Wind,myairquality$Temp,myairquality$Date)
+  # df
+  melted_dfheat <- melt(dfheat,id=c("myairquality.Date"))
+  # melted_df
+  
+  gghist <- ggplot(melted_dfheat,aes(x= myairquality.Date,y=variable)) 
+  
+  gghist+geom_tile(aes(fill=value))+scale_fill_gradient(low="pink", high="orange")+ggtitle("Airquality value changes over time - heatmap")+theme+ xlab("Time ----->")+ylab("variables ----->")
+
+```
+
+# Step 5: Look at all the data via a scatter chart
+<!-- Create a scatter chart (using ggplot geom_point), with the x-axis representing the wind, the y-axis representing the temperature, the size of each dot representing the ozone and the color representing the solar.R -->
+
+```{r}
+dfscatter <-data.frame(myairquality$Ozone,myairquality$Solar.R,myairquality$Wind,myairquality$Temp,myairquality$Date)
+
+# df
+
+ gghist <- ggplot(dfscatter,aes(x= myairquality.Wind,y=myairquality.Temp))
+ gghist+geom_point(color="steel blue",aes(size=myairquality.Ozone,color=myairquality.Solar.R)) +ggtitle("Airquality value changes over time - scatter plot")+theme+ xlab("Wind ----->")+ylab("Temp ----->") +geom_smooth(method="auto", se=TRUE, fullrange=FALSE, level=0.95)
+ 
+```
+
+# Step 6: Final Analysis
+<!-- Correlation analysis on Ozone,Solar, Wind and Temp values. -->
+
+• Do you see any patterns after exploring the data?
+• What was the most useful visualization?
+
+```{r}
+dfscorr <-data.frame(myairquality$Ozone,myairquality$Solar.R,myairquality$Wind,myairquality$Temp)
+
+colnames(dfscorr)
+
+colnames(dfscorr) <- c("ozone","solar","wind","temp")
+
+corr <- round(cor(dfscorr),1)
+
+head(corr[,1:4])
+
+
+ggcorrplot(corr, hc.order = TRUE, lab = TRUE, outline.col = "white",type = "upper", colors = c("#6D9EC1", "white", "#E46726"))
+
+# • Do you see any patterns after exploring the data?
+    # As we can see from the correlation chart below, Temp and Ozone are highly correlated.
+
+# • What was the most useful visualization?
+    
+    # I liked almost all the charts; However, BoxPlot, ScatterPlot and Correlation charts are really insightful.
+```
+

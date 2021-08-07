@@ -1,0 +1,166 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+-----------------------------------------------------------------------------------
+Title: "IST687 – JSON & tapply Homework: Accident Analysis"
+Name: Sathish Kumar Rajendiran
+Week: 5
+Date: 05/06/2020
+-----------------------------------------------------------------------------------
+Exercise: 
+        Accident Analysis
+
+
+#   Step 1: Load the data
+<!-- Read in the following JSON dataset -->
+<!-- http://data.maryland.gov/api/views/pdvh-tf2u/rows.json?accessType=DOWNLOAD -->
+
+```{r}
+# Intall Packages
+
+# install.packages("RSQLite")
+# install.packages("jsonlite")
+# install.packages("RCurl")
+# install.packages("RJSONIO")
+
+```
+
+
+#Step 1: Load the data
+
+      <!-- Read in the following JSON dataset -->
+      <!-- http://data.maryland.gov/api/views/pdvh-tf2u/rows.json?accessType=DOWNLOAD -->
+      
+#Step 2: Clean the data
+
+```{r Clean}
+library(RJSONIO)
+library(RCurl)
+library(jsonlite)
+library(sqldf)
+
+
+    marylandData <- "http://opendata.maryland.gov/api/views/pdvh-tf2u/rows.json?accessType=DOWNLOAD"
+    jsonResult <- fromJSON(marylandData)
+    # summary(jsonResult)
+    
+    jsonData <- jsonResult$data
+    # summary(jsonData)
+    
+# Convert to Dataframe
+    dfTemp <- data.frame(jsonData,stringsAsFactors = FALSE)
+    
+    # head(dfTemp)
+
+# delete columns 1 through 8
+    
+    marylandDF <- dfTemp[, -c(1:8)] 
+    head(marylandDF)
+
+# Assign Column Names
+
+    colnames(marylandDF) <- c("CASE_NUMBER","BARRACK","ACC_DATE","ACC_TIME","ACC_TIME_CODE","DAY_OF_WEEK","ROAD","INTERSECT_ROAD","DIST_FROM_INTERSECT","DIST_DIRECTION","CITY_NAME","COUNTY_CODE","COUNTY_NAME","VEHICLE_COUNT","PROP_DEST","INJURY","COLLI SION_WITH_1","COLLISION_WITH_2")
+
+    # head(marylandDF)
+
+    marylandDF <- na.omit(marylandDF)  # Remove NAs from the data
+    
+    # summary(marylandDF)
+    # length(marylandDF)
+    # colnames(marylandDF)
+    # nrow(marylandDF)
+    
+    head(marylandDF)
+
+```
+
+
+Step 3: Understand the data using SQL (via SQLDF)
+
+```{r SQLDF}
+# Answer the following questions:
+# • How many accidents happen on SUNDAY
+# • How many accidents had injuries (might need to remove NAs from the data)
+# • List the injuries by day
+
+      marylandDF <- na.omit(marylandDF)  # Remove NAs from the data
+      
+      sqlResults <- sqldf("select  * from marylandDF limit 5")
+      # sqlResults
+      
+      nbrofsudayAccidentsSQL <- sqldf("select count(*)  from marylandDF where lower(trim(Day_of_Week)) = 'sunday'")
+      cat( "\n Number of accidents happenened on Sunday are: ",unlist(nbrofsudayAccidentsSQL))
+      
+      
+      nbrofInjuriesSQL <- sqldf("select count(*)  from marylandDF where lower(trim(INJURY)) = 'yes'")
+      cat( "\n Number of accidents with injuries are: ",unlist(nbrofInjuriesSQL))
+      
+      injuriesBydaySQL <- sqldf("select trim(DAY_OF_WEEK) as Day, count(*) as Accidents  from marylandDF where lower(trim(INJURY)) = 'yes' group by DAY_OF_WEEK order by Day  ")
+      
+      injuriesBydaySQL
+      injuriesByday <- injuriesBydaySQL$Accidents
+```
+
+
+Step 4: Understand the data using tapply
+
+```{r TAPPLY}
+
+  marylandDF$DAY_OF_WEEK <- trimws(marylandDF$DAY_OF_WEEK)
+  
+  unique(marylandDF$DAY_OF_WEEK)
+
+  
+# Subset Method 
+  # sundayAccidents <- subset(marylandDF,marylandDF$DAY_OF_WEEK=="SUNDAY")
+  # NbrOfsundayAccidents <- nrow(sundayAccidents)
+  # cat( "\n Number of accidents happen on Sunday are ",NbrOfsundayAccidents)
+  # 
+  # unique(marylandDF$INJURY)
+  # injuryAccidents <- subset(marylandDF,marylandDF$INJURY=="YES")
+  # NbrOfInjuryAccidents <- nrow(injuryAccidents)
+  # cat( "\n Number of accidents happen on Sunday are: ",NbrOfInjuryAccidents)
+  
+# tapply Method   
+  sundayAccidents <- tapply(marylandDF$DAY_OF_WEEK,marylandDF$DAY_OF_WEEK=="SUNDAY",length)
+  cat( "\n Number of accidents happen on Sunday are: ",sundayAccidents[[2]])
+  
+  sundayAccidents
+  
+  injuryAccidents <- tapply(marylandDF$INJURY,marylandDF$INJURY=="YES",length)
+  cat( "\n Number of accidents had injuries are: ",injuryAccidents[[2]])
+  injuryAccidents
+  
+  injuriesByday <- tapply(marylandDF$INJURY=="YES",marylandDF$DAY_OF_WEEK,sum)
+  cat("\n Injuries by day:",sort(injuriesByday,decreasing = TRUE))
+  sort(injuriesByday,decreasing = TRUE)
+
+```
+
+```{r Graphs}
+
+#Graphs
+
+      days <- c(injuriesBydaySQL$Day)
+      accidents <- injuriesBydaySQL$Accidents
+
+      colors <- c("lightblue","mistyrose","lightcyan","lavender","cornsilk","steelblue","lightgreen")
+
+# Barplot                  
+      barplot(accidents, main = "Injuries By day"
+              , names.arg = days, xlab = "Day of Week", ylab = "Accidents"
+              ,ylim = c(0,1000), beside=TRUE, col = colors,border = "black")
+      
+      
+# Horizontal barplot
+      barplot(main = "Injuries By day"
+              , height=accidents, names=days,xlim = c(0,1000)
+              , col = colors,border = "black",horiz=T, las=1)
+      
+      # boxplot(split(injuriesBydaySQL$Accidents,injuriesBydaySQL$Day),main='Injuries By day', border = "blue")
+
+```

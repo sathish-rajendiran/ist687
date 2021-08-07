@@ -1,0 +1,99 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+       fpath <- "http://www2.census.gov/programs-surveys/popest/tables/2010-2011/state/totals/nst-est2011-01.csv"
+
+        f <- read.csv(url(fpath),skip=3)
+        f <- f[,c(1,2,3,4,5)]
+        colnames(f)<- c('stateName', 'base2010', 'base2011','Jul2010', 'Jul2011')
+        f <- f[6:56,]
+        row.names(f) <- NULL
+        
+        n <-length(f)
+        mode(x)
+        
+        f$base2010 <- as.integer(gsub(',','',f$base2010))
+        f$base2011 <- as.integer(gsub(',','',f$base2011))
+        f$Jul2010 <- as.integer(gsub(',','',f$Jul2010))
+        f$Jul2011 <- as.integer(gsub(',','',f$Jul2011))
+        f$stateName <- gsub('[.]','',f$stateName)
+       
+        maxStatePop <- data.frame(f[which.max(f$Jul2011),1],max(f$Jul2011))
+        f[order(f$Jul2011, decreasing = TRUE),]
+
+        paste(f[which.max(f$Jul2011),1],max(f$Jul2011), sep = " had the greatest residents in July 2011, totaling ")
+        
+```
+
+
+
+```{r}
+ #######  MINIMUM CODE  ########
+  remove(f)
+  getwd()
+  setwd("C:/Users/ShawnAnderson/OneDrive/Syracuse/_Courses/_Spring 2020/IST687 Applied Data Science/Wk3")
+  Censustf <- read.csv("p116 file download nst-est2011-01.csv", stringsAsFactors = FALSE)
+  f <- Censustf[c(-1:-8,-60:-66),-6:-10]
+  colnames(f) <- c("stateNames","base2010","base2011","Jul2010","Jul2011")
+    f$stateNames <- gsub("\\.","",as.character(f$stateNames))
+  f[,2] <- as.numeric(gsub(" ", "",f[,2]<-gsub(",", "",f[,2])))
+  f[,3] <- as.numeric(gsub(" ", "",f[,3]<-gsub(",", "",f[,3])))
+  f[,4] <- as.numeric(gsub(" ", "",f[,4]<-gsub(",", "",f[,4])))
+  f[,5] <- as.numeric(gsub(" ", "",f[,5]<-gsub(",", "",f[,5])))
+  
+  
+  f <- data.frame(f)
+  mean(f[,5])
+  maxStatePop <- data.frame(f[which.max(f[,5]),1],max(f[,5]))
+  f[order(f[5], decreasing = TRUE),]
+  paste(f[which.max(f[,5]),1],max(f[,5]), sep = " had the greatest residents in July 2011, totaling ")
+  
+```
+
+```{r}
+fpath <- "http://www2.census.gov/programs-surveys/popest/tables/2010-2011/state/totals/nst-est2011-01.csv"
+        f <- read.csv(url(fpath),skip=3)
+        f <- f[,c(1,2,3,4,5)]
+        colnames(f)<- c('stateName', 'base2010', 'base2011','Jul2010', 'Jul2011')
+        f <- f[6:56,]
+        f$stateName <- gsub('[.]','',f$stateName)
+        row.names(f) <- NULL
+        str(f)
+        x <- 1
+        for (x in 2:length(f))
+          {
+         f[,x] <- as.integer(gsub(',','',f[,x]))
+         str(f)
+          }
+        maxStatePop <- data.frame(f[which.max(f[,5]),1],max(f[,5]))
+        f[order(f[,5], decreasing = TRUE),]
+        paste(f[which.max(f[,5]),1],max(f[,5]), sep = " had the greatest residents in July 2011, totaling ")
+```
+
+```{r}
+fpath <- "http://www2.census.gov/programs-surveys/popest/tables/2010-2011/state/totals/nst-est2011-01.csv"
+    
+    f <- read.csv(url(fpath),skip=3)
+    f <-  f[6:56,c(1,2,3,4,5)]
+    colnames(f) <- c('stateName', 'base2010', 'base2011','Jul2010', 'Jul2011')
+    f$stateName <- gsub('[.]','',f$stateName)
+    row.names(f) <- NULL
+    
+    str(f)
+    
+    x <- 1
+    
+    for (x in 2:length(f))
+      {
+       f[,x] <- as.integer(gsub(',','',f[,x]))
+       str(f)
+      }
+    
+    maxStatePop <- data.frame(f[which.max(f[,5]),1],max(f[,5]))
+    f[order(f[,5], decreasing = TRUE),]
+    
+    paste(f[which.max(f[,5]),1],formatC(max(f[,5]),format="f",big.mark=",",digits = 0), sep = " had the greatest residents in July 2011, totaling ")
+```

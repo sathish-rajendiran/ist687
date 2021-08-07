@@ -1,0 +1,185 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+-----------------------------------------------------------------------------------
+Title: "IST687 – Cleaning/munging Dataframes"
+Name: Sathish Kumar Rajendiran
+Week: 3
+Date: 04/20/2020
+-----------------------------------------------------------------------------------
+Exercise: 
+        Data munging on state populations (within the United States).
+
+
+Step 1: Create a function (named readStates) to read a CSV file into R
+
+      * Note that you are to read a URL, not a file local to your computer.
+      * The file is a dataset on state populations (within the United States).
+      * The URL is: http://www2.census.gov/programs-surveys/popest/tables/2010-2011/state/totals/nst-est2011-01.csv
+
+```{r}
+
+#   1. Note that you are to read a URL, not a file local to your computer.
+#   2. The file is a dataset on state populations (within the United States).
+      
+      #file path
+      fpath <- "http://www2.census.gov/programs-surveys/popest/tables/2010-2011/state/totals/nst-est2011-01.csv"
+     
+      # function readStates
+      readStates <- function(fpath)
+        {
+        dftemp <- read.csv(url(fpath),skip=3)
+        #head(dfStates,10)
+        #colnames(dfStates)
+        return(dftemp)
+        }
+      
+      dftemp <- readStates(fpath) 
+      head(dftemp)
+  
+```
+
+Step 2: Clean the dataframe
+
+```{r}
+
+#   3. Note the issues that need to be fixed (removing columns, removing rows, changing column names).
+      
+    head(dftemp)
+    tail(dftemp)
+    summary(dftemp)
+    
+#   4. Within your function, make sure there are 51 rows (one per state + the district of following names 
+#      (stateName,base2010,base2011,Jul2010,Jul2011)
+
+    # remove empty column
+    dftemp <- dftemp[,c(1,2,3,4,5)]
+    #head(dfStates)
+
+    colnames(dftemp)<- c('stateName', 'base2010', 'base2011','Jul2010', 'Jul2011')
+    #summary(dfStates)
+    
+    # Keep only rows corresponding to the states & remove empty rows
+    dftemp <- dftemp[6:56,]
+    #head(dfStates)
+
+#   5. Make sure the last four columns are numbers (i.e. not strings)
+    dftemp$base2010 <- as.integer(gsub(',','',dftemp$base2010))
+    dftemp$base2011 <- as.integer(gsub(',','',dftemp$base2011))
+    dftemp$Jul2010 <- as.integer(gsub(',','',dftemp$Jul2010))
+    dftemp$Jul2011 <- as.integer(gsub(',','',dftemp$Jul2011))
+    
+    # remove the special character "." infront of stateName
+    dftemp$stateName <- gsub('^[.]{1}','',dftemp$stateName)
+    
+    # reset Row Index
+    row.names(dftemp) <- NULL
+    
+    summary(dftemp)
+    head(dftemp)
+    
+```
+
+Step 3: Store and Explore the dataset
+        Putting all together into one function
+```{r}
+
+#     6. Store the dataset into a dataframe, called dfStates
+
+      # file path
+      fpath <- "http://www2.census.gov/programs-surveys/popest/tables/2010-2011/state/totals/nst-est2011-01.csv"
+
+      # function readStates
+      readStates <- function(fpath)
+        {
+        dftemp <- read.csv(url(fpath),skip=3)
+        dftemp <- dftemp[,c(1,2,3,4,5)]
+        colnames(dftemp)<- c('stateName', 'base2010', 'base2011','Jul2010', 'Jul2011')
+        dftemp <- dftemp[6:56,]
+        dftemp$base2010 <- as.integer(gsub(',','',dftemp$base2010))
+        dftemp$base2011 <- as.integer(gsub(',','',dftemp$base2011))
+        dftemp$Jul2010 <- as.integer(gsub(',','',dftemp$Jul2010))
+        dftemp$Jul2011 <- as.integer(gsub(',','',dftemp$Jul2011))
+        dftemp$stateName <- gsub('[.]','',dftemp$stateName)
+        
+        row.names(dftemp) <- NULL
+        return(dftemp)
+        }
+      
+      dfStates <- readStates(fpath) 
+      head(dfStates)
+      
+#     7. Test your dataframe by calculating the mean for the July2011 data, by doing:
+      
+      Jul2011Mean <- mean(dfStates$Jul2011)
+      sprintf("%.0f is the Jul2011 mean",Jul2011Mean)
+      
+```
+
+Step 4: Find the state with the Highest Population
+
+```{r}
+
+#     8. Based on the July2011 data, what is the population of the state with the highest population? What is the name of that state?
+      
+      maxPopulation <- max(dfStates$Jul2011)
+      sprintf("%.0f is the highest population in July 2011",maxPopulation)
+      
+      maxPopState_index <- which.max(dfStates$Jul2011)
+      maxPopState <- dfStates[maxPopState_index,1]
+      print(paste("State with highest population in July 2011 is:",maxPopState),max.levels = 0)
+
+#     9. Sort the data, in increasing order, based on the July2011 data
+      
+      dfStates <- dfStates[order(dfStates$Jul2011),]
+      head(dfStates)
+      tail(dfStates)
+
+```
+
+Step 5: Explore the distribution of the states
+
+```{r}
+#     10. Write a function that takes two parameters. The first is a vector and the second is a number.
+#     11. The function will return the percentage of the elements within the vector that is less than the same (i.e. the cumulative distribution below the value provided).
+#     12. For example, if the vector had 5 elements (1,2,3,4,5), with 2 being the number passed into the function, the function would return 0.2 (since 20% of the numbers were below 2)
+      v <- c(1,2,3,4,5)
+
+# function readStates
+      cumDist <- function(v,n)
+        {
+        #distValue <- mean(v<n)  #--option using mean
+        distValue <- prop.table(table(v < n))[2]  #-- option using proportion
+        #distValue <- length(which(v<n))/length(v)  # option using length
+        return(distValue)
+        }
+      
+      distValue <- cumDist(v,2) 
+      distValue_percent <- distValue*100
+      sprintf("%0.0f Percentage of population are less than the average population in July 2011",distValue_percent)
+```
+
+13. Test the function with the vector ‘dfStates$Jul2011Num’, and the mean of dfStates$Jul2011Num’.
+There are many ways to write this function (described in #10 above) – so please try to write multiple versions of this function – which do you think is best?
+
+```{r}
+#     13. Test the function with the vector ‘dfStates$Jul2011Num’, and the mean of dfStates$Jul2011Num’
+        cumDist <- function(v,n)
+          {
+            #distValue <- prop.table(table(v < n))[2]  #-- option using proportion
+            #distValue <- length(which(v<n))/length(v)  # option using length
+            distValue <- mean(v<n)  #--option using mean
+            return(distValue)
+          }
+        meanJul2011 <- mean(dfStates$Jul2011)
+        distValue <- cumDist(dfStates$Jul2011,meanJul2011) 
+        distValue_percent <- distValue*100
+        sprintf("%.0f Percentage of population are less than the average population in July 2011",distValue_percent)
+       
+         #67 Percentage of population are less than the average population in July 2011" This option looks simpler
+```
+
